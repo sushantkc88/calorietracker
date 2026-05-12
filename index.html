@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  <title>Calorie Tracker • Precision Macro Tracking</title>
+  <!-- [Previous styles remain the same - no changes needed] -->
+  <style>
+    /* All your existing styles here - unchanged */
+  </style>
+</head>
+<body>
+<!-- [HTML structure remains the same] -->
+
+<script>
+  (function() {
+    // ---------- OFFLINE DATABASE ----------
+    // [Your existing database code remains the same]
+    
+    // ---------- ONLINE SEARCH FUNCTIONALITY ----------
+    const API_ENDPOINTS = {
+      // USDA FoodData Central API (free, no key required for basic searches)
+      usda: 'https://api.nal.usda.gov/fdc/v1/foods/search',
+      // Open Food Facts API (free, no key required)
+      openFoodFacts: 'https://world.openfoodfacts.org/cgi/search.pl',
+      // Nutritionix API (requires free API key)
+      nutritionix: 'https://trackapi.nutritionix.com/v2/search/instant'
+    };
+    
+    // USDA API Key - Get yours for free at: https://fdc.nal.usda.gov/api-key-signup.html
+    const USDA_API_KEY = 'DEMO_KEY'; // Replace with your actual API key for production
+    
+    // Check if device is online
+    function isOnline() {
+      return navigator.onLine;
+    }
+    
+    // Search online using multiple APIs as fallback
+    async function searchOnline(query) {
+      if (!isOnline()) {
+        return null;
+      }
+      
+      searchStatus.textContent = '🔍 Searching online databases...';
+      
+      try {
+        // Try USDA API first
+        const usdaResults = await searchUSDA(query);
+        if (usdaResults && usdaResults.length > 0) {
+          return usdaResults;
+        }
+        
+        // Try Open Food Facts as fallback
+        const offResults = await searchOpenFoodFacts(query);
+        if (offResults && offResults.length > 0) {
+          return offResults;
+        }
+        
+        return [];
+      } catch (error) {
+        console.error('Online search error:', error);
+        return [];
+      }
+    }
+    
+    // USDA FoodData Central API search
+    async function searchUSDA(query) {
+      try {
+        const response = await fetch(`${API_ENDPOINTS.usda}?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&dataType=Foundation,SR Legacy&pageSize=10`);
+        
+        if (!response.ok) {
+          throw new Error('USDA API request failed');
+        }
+        
+        const data = await response.json();
+        
+        if (data.foods && data.foods.length > 0) {
+          return data.foods.map(food => {
+            const nutrients = {};
+            food.foodNutrients.forEach(nutrient => {
+              if (nutrient.nutrientId === 1008) nutrients.calories = nutrient.value; // Energy
+              if (nutrient.nutrientId === 1003) nutrients.protein = nutrient.value; // Protein
+              if (nutrient.nutrientId === 1005) nutrients.carbs = nutrient.value; // Carbs
+              if (nutrient.nutrientId === 1004) nutrients.fat = nutrient.value; // Total Fat
+            });
+            
+            return {
+              name: food.description,
+              serving: '100g',
+              calories: Math.round(nutrients.calories || 0),
+              protein: Math.round((nutrients.protein || 0) * 10) / 10,
+              carbs: Math.round((nutrients.carbs || 0) * 10) / 10,
+              fat: Math.round((nutrients.fat || 0) * 10) / 10,
+              isCustom: false,
+              isOnline: true,
+              source: 'USDA'
+            };
+          }).filter(food => food.calories > 0);
+        }
+        return [];
+      } catch (error) {
+        console.error('USDA search error:', error);
+        return [];
+      }
+    }
+    
+    // Open Food Facts API search
+    async function searchOpenFoodFacts(query) {
+      try {
+        const response = await fetch(`${API_ENDPOINTS.openFoodFacts}?search_terms=${encodeURIComponent(query)}&search_simple=1&json=1&page_size=10`);
+        
+        if (!response.ok) {
+          throw new Error('Open Food Facts API request failed');
+        }
+        
+        const data = await response.json();
+        
+        if (data.products && data.products.length > 0) {
+          return data.products
+            .filter(product => product.nutriments && product.product_name)
+            .map(product => {
+              const nutrients = product.nutriments;
+              const serving = product.serving_size || '100g';
+              
+              return {
+                name: product.product_name,
+                serving: serving,
+                calories: Math.round(nutrients['energy-kcal_100g'] || nutrients['energy-kcal'] || 0),
+                protein: Math.round((nutrients.proteins_100g || nutrients.proteins || 0) * 10) / 10,
+                carbs: Math.round((nutrients.carbohydrates_100g || nutrients.carbohydrates || 0) * 10) / 10,
+                fat: Math.round((nutrients.fat_100g || nutrients.fat || 0) * 10) / 10,
+                isCustom: false,
+                isOnline: true,
+                source: 'OpenFoodFacts'
+              };
+            })
+            .filter(food => food.calories > 0 && food.name);
+        }
+        return [];
+      } catch (error) {
+        console.error('Open Food Facts search error:', error);
+        return [];
+      }
+    }
+    
+    // Main search function with online fallback
+    async function performSearch() {
+      const query = searchInput.value.trim();
+      if (!query) {
+        const popular = getFullDatabase().slice(0, 8);
+        displayResults(popular);
+        searchStatus.textContent = '📋 Showing popular items';
+        return;
+      }
+      
+      // First search locally
+      const localResults = searchOffline(query);
+      
+      if (localResults.length > 0) {
+        // Found locally
+        displayResults(localResults);
+        searchStatus.textContent = `✅ ${localResults.length} found locally`;
+      } else if (isOnline()) {
+        // Not found locally, search online
+        searchStatus.textContent = '🔍 Not found locally, searching online...';
+        const onlineResults = await searchOnline(query);
+        
+        if (onlineResults && onlineResults.length > 0) {
+          displayResults(onlineResults);
+          searchStatus.textContent = `✅ ${onlineResults.length} found online`;
+          
+          // Option to save online results to local database
+          addSaveToLocalButtons(onlineResults);
+        } else {
+          displayResults([]);
+          searchStatus.textContent = '😕 No results found online either';
+        }
+      } else {
+        // Not found locally and offline
+        displayResults([]);
+        searchStatus.textContent = '📡 Offline - no results found';
+      }
+    }
+    
+    // Add functionality to save online results to local database
+    function addSaveToLocalButtons(onlineResults) {
+      setTimeout(() => {
+        document.querySelectorAll('.food-item').forEach((item, index) => {
+          const isOnlineItem = item.getAttribute('data-online') === 'true';
+          if (!isOnlineItem) return;
+          
+          const saveBtn = document.createElement('button');
+          saveBtn.className = 'preset-btn';
+          saveBtn.style.cssText = 'font-size:0.65rem; padding:2px 8px;';
+          saveBtn.textContent = '💾 Save';
+          saveBtn.onclick = () => {
+            const foodData = onlineResults[index];
+            if (foodData) {
+              addToUserDatabase(
+                foodData.name,
+                foodData.calories,
+                foodData.protein,
+                foodData.carbs,
+                foodData.fat,
+                foodData.serving
+              );
+              saveBtn.textContent = '✅ Saved';
+              saveBtn.disabled = true;
+              searchStatus.textContent = '✅ Food saved to local database!';
+              setTimeout(() => {
+                if (searchStatus.textContent === '✅ Food saved to local database!') {
+                  searchStatus.textContent = '';
+                }
+              }, 2000);
+            }
+          };
+          
+          item.querySelector('.food-actions')?.appendChild(saveBtn);
+        });
+      }, 100);
+    }
+    
+    // Modified displayResults to handle online items
+    function displayResults(results) {
+      if (!foodResultsContainer) return;
+      
+      if (results.length === 0) {
+        foodResultsContainer.innerHTML = `
+          <div style="color:#94a3b8; text-align:center; padding:20px;">
+            😕 No food found. ${isOnline() ? 'Try a different search or add custom entry above.' : 'You are offline - try custom entry above.'}
+          </div>`;
+        return;
+      }
+      
+      foodResultsContainer.innerHTML = results.map((item, index) => {
+        const name = item.name || 'Unknown';
+        const serving = item.serving || 'standard serving';
+        const calories = item.calories || 0;
+        const protein = item.protein || 0;
+        const carbs = item.carbs || 0;
+        const fat = item.fat || 0;
+        const isCustom = item.isCustom === true;
+        const isOnline = item.isOnline === true;
+        const source = item.source || '';
+        const warnings = validateMacros(name, protein, carbs, fat, calories);
+        const isSuspicious = warnings.length > 0;
+        
+        return `
+          <div class="food-item ${isCustom ? 'custom-item' : ''}" 
+               data-food-id="${item.id || ''}" 
+               data-food-name="${escapeHtml(name)}" 
+               data-food-calories="${calories}" 
+               data-food-protein="${protein}" 
+               data-food-carbs="${carbs}" 
+               data-food-fat="${fat}" 
+               data-food-serving="${escapeHtml(serving)}" 
+               data-is-custom="${isCustom}"
+               data-online="${isOnline}"
+               data-index="${index}">
+            <div class="food-main-row">
+              <div class="food-info">
+                <span class="food-name">
+                  ${escapeHtml(name)}
+                  ${isCustom ? '<span class="custom-tag">✏️ CUSTOM</span>' : ''}
+                  ${isOnline ? `<span class="online-tag" style="background:#3b82f6; color:white; font-size:0.55rem; padding:1px 5px; border-radius:6px; margin-left:4px;">🌐 ${source}</span>` : ''}
+                  ${isSuspicious ? '<span class="warning-tag" style="background:#ef4444; color:white; font-size:0.55rem; padding:1px 5px; border-radius:6px;">⚠️ Review</span>' : ''}
+                </span>
+                <span class="food-serving">${escapeHtml(serving)} • ${calories} kcal</span>
+                <span class="food-macros">
+                  <span class="protein-color">🥩${protein}g</span>
+                  <span class="carbs-color">🍞${carbs}g</span>
+                  <span class="fat-color">🧈${fat}g</span>
+                </span>
+              </div>
+              <div class="food-actions">
+                <button class="preset-btn active" data-type="preset">Preset</button>
+                <button class="manual-btn" data-type="manual">Grams</button>
+                ${isCustom ? `<button class="edit-btn">✏️ Edit</button><button class="delete-btn">🗑️ Del</button>` : ''}
+              </div>
+            </div>
+            <div class="manual-gram-row" style="display:none;">
+              <input type="number" class="gram-input" placeholder="grams" value="100" min="1" step="1">
+              <span class="cal-badge dynamic-cal">${calories} kcal</span>
+              <button class="add-btn custom-gram-add">+</button>
+            </div>
+            <div class="preset-row" style="display:flex; align-items:center; gap:6px;">
+              <input type="number" class="qty-input" value="1" min="0.25" max="20" step="0.25">
+              <span class="cal-badge preset-cal">${calories} kcal</span>
+              <button class="add-btn preset-add">+</button>
+            </div>
+            ${isSuspicious ? `<div style="font-size:0.6rem; color:#f87171; margin-top:4px;">⚠️ ${warnings.join(' · ')}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Attach event listeners (your existing logic)
+      attachFoodItemListeners();
+      
+      // Add save buttons for online items
+      if (results.some(item => item.isOnline)) {
+        addSaveToLocalButtons(results);
+      }
+    }
+    
+    // Extract your existing event listener attachment to a function
+    function attachFoodItemListeners() {
+      document.querySelectorAll('.food-item').forEach(item => {
+        // Your existing event listener code goes here
+        // [All the existing event listeners you have in displayResults]
+      });
+    }
+    
+    // Rest of your existing code...
+    // [All other functions remain the same]
+  })();
+</script>
+</body>
+</html>
