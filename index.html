@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  <title>Calorie Tracker • Precision Macro Tracking</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #0f172a; color: #f1f5f9; min-height: 100vh;
+      display: flex; justify-content: center; align-items: flex-start; padding: 0 0 20px 0;
+    }
+    .app-container {
+      width: 100%; max-width: 430px; background: #1e293b; border-radius: 0 0 32px 32px;
+      overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+    .header {
+      background: #0f172a; padding: 20px 20px 15px; border-bottom: 1px solid #334155;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header h1 {
+      font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #f97316, #ef4444);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .offline-badge { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #a3e635; background: #1e293b; padding: 4px 10px; border-radius: 20px; }
+    .reset-alert { background: #f97316; color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; text-align: center; margin: 8px 16px; display: none; }
+
+    .daily-summary {
+      background: #0f172a; margin: 16px 16px 10px; padding: 16px;
+      border-radius: 24px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    /* Water tracker */
+    .water-tracker {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #1e293b; border-radius: 12px; padding: 8px 12px; margin-bottom: 12px;
+    }
+    .water-label { font-size: 0.8rem; font-weight: bold; color: #60a5fa; }
+    .water-btn { background: #334155; border: none; color: white; width: 26px; height: 26px; border-radius: 50%; font-size: 0.9rem; cursor: pointer; }
+    .water-count { font-weight: bold; font-size: 1rem; color: #fff; min-width: 20px; text-align: center; }
+
+    /* Calorie row */
+    .calorie-row { display: flex; justify-content: space-around; align-items: center; margin-bottom: 10px; }
+    .calorie-circle {
+      background: #1e293b; border-radius: 50%; width: 74px; height: 74px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: 4px solid #f97316; font-weight: bold; flex-shrink: 0;
+    }
+    .calorie-number { font-size: 1.35rem; color: #fff; line-height: 1; }
+    .calorie-label { font-size: 0.6rem; color: #94a3b8; text-transform: uppercase; }
+    .goal-info { display: flex; flex-direction: column; gap: 4px; flex: 1; padding-left: 14px; }
+    .goal-edit { display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+    .goal-input { width: 68px; background: #1e293b; border: 1px solid #f97316; border-radius: 10px; padding: 6px; font-size: 0.8rem; color: #fff; outline: none; text-align: center; }
+    .goal-set-btn { background: #f97316; border: none; color: white; padding: 6px 10px; border-radius: 10px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
+    .calc-tdee-btn { background: #334155; border: none; color: white; padding: 6px 10px; border-radius: 10px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
+    .progress-bar { width: 100%; height: 6px; background: #334155; border-radius: 10px; overflow: hidden; margin-top: 4px; }
+    .progress-fill { height: 100%; width: 0%; background: #f97316; border-radius: 10px; transition: width 0.3s ease; }
+    .date-display { font-size: 0.7rem; color: #94a3b8; text-align: center; margin: 8px 0 10px; }
+
+    /* Macros */
+    .macro-goals-row { display: flex; justify-content: space-between; gap: 6px; }
+    .macro-goal-item { flex: 1; background: #1e293b; border-radius: 12px; padding: 8px; text-align: center; }
+    .macro-label { font-size: 0.6rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; font-weight: 600; }
+    .macro-values { font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px; }
+    .macro-input { width: 44px; background: #0f172a; border: 1px solid #475569; border-radius: 6px; padding: 2px; font-size: 0.7rem; color: #fff; text-align: center; outline: none; margin-top: 2px; }
+    .macro-set-btn { background: #f97316; border: none; color: white; font-size: 0.55rem; font-weight: 700; padding: 3px 6px; border-radius: 6px; cursor: pointer; margin-top: 4px; display: block; width: 100%; }
+    .protein-color { color: #3b82f6; } .carbs-color { color: #f59e0b; } .fat-color { color: #ef4444; }
+
+    /* Day mode toggle */
+    .day-mode-bar {
+      display: flex; gap: 0; margin: 0 16px 8px; border-radius: 12px; overflow: hidden;
+      border: 1px solid #334155;
+    }
+    .day-mode-btn {
+      flex: 1; padding: 8px 0; font-size: 0.75rem; font-weight: 700; border: none; cursor: pointer;
+      background: #1e293b; color: #94a3b8; transition: 0.2s;
+    }
+    .day-mode-btn.active { background: #f97316; color: white; }
+
+    /* Meal selector */
+    .meal-selector-row { padding: 0 16px 8px; display: flex; justify-content: space-between; align-items: center; }
+    .meal-select { background: #1e293b; color: #f97316; border: 1px solid #475569; border-radius: 12px; padding: 6px 12px; font-size: 0.85rem; font-weight: bold; outline: none; cursor: pointer; }
+
+    /* Search */
+    .search-section { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 6px; }
+    .search-box { display: flex; gap: 8px; align-items: center; }
+    .search-input { flex: 1; background: #0f172a; border: 1px solid #475569; border-radius: 20px; padding: 12px 16px; font-size: 0.95rem; color: #f1f5f9; outline: none; }
+    .search-input:focus { border-color: #f97316; }
+    .search-btn { background: #f97316; border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: white; cursor: pointer; }
+
+    /* Custom add */
+    .custom-add-section { background: #0f172a; margin: 0 16px 12px; padding: 12px; border-radius: 16px; border: 1px dashed #f97316; }
+    .custom-title { font-size: 0.75rem; color: #f97316; margin-bottom: 8px; font-weight: 600; }
+    .custom-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .custom-input { flex: 1; min-width: 50px; background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 6px 8px; font-size: 0.8rem; color: #f1f5f9; outline: none; }
+    .custom-add-btn { background: #f97316; border: none; color: white; font-weight: bold; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+
+    /* Food list */
+    .food-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; margin-bottom: 12px; }
+    .food-item { background: #0f172a; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; border: 1px solid #334155; }
+    .food-item.custom-item { border-color: #f97316; }
+    .food-main-row { display: flex; justify-content: space-between; align-items: flex-start; }
+    .food-info { display: flex; flex-direction: column; flex: 1; }
+    .food-name { font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .food-serving { font-size: 0.7rem; color: #94a3b8; }
+    .food-macros { display: flex; gap: 8px; font-size: 0.7rem; margin-top: 2px; }
+    .food-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .preset-btn, .manual-btn { background: #1e293b; border: 1px solid #475569; color: #cbd5e1; padding: 4px 10px; border-radius: 20px; font-size: 0.65rem; cursor: pointer; }
+    .preset-btn.active, .manual-btn.active { background: #f97316; border-color: #f97316; color: white; font-weight: bold; }
+    .manual-gram-row, .preset-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .gram-input, .qty-input { width: 68px; background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 6px 8px; font-size: 0.75rem; color: #fff; text-align: center; outline: none; }
+    .cal-badge { background: #1e293b; padding: 4px 10px; border-radius: 12px; font-weight: 700; color: #f97316; font-size: 0.78rem; }
+    .add-btn { background: #f97316; border: none; color: white; font-weight: bold; font-size: 1rem; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .delete-btn { background: transparent; border: none; color: #ef4444; font-size: 0.75rem; cursor: pointer; }
+    .custom-tag { background: #f97316; color: white; font-size: 0.55rem; padding: 1px 6px; border-radius: 6px; }
+    .recent-tag { background: #10b981; color: white; font-size: 0.55rem; padding: 1px 6px; border-radius: 6px; }
+
+    /* Log section */
+    .log-section { padding: 12px 16px; border-top: 1px solid #334155; background: #0f172a; margin: 4px 16px 16px; border-radius: 20px; }
+    .log-title { font-size: 0.9rem; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .log-btn-group { display: flex; gap: 4px; }
+    .end-log-btn { background: #22c55e; border: none; color: white; padding: 5px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+    .log-history-btn { background: #1e293b; border: 1px solid #f97316; color: #f97316; padding: 5px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
+    .reset-btn { background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 5px 10px; border-radius: 12px; font-size: 0.7rem; cursor: pointer; }
+    .meal-group-container { margin-bottom: 8px; background: #1e293b; border-radius: 12px; padding: 8px; }
+    .meal-group-header { font-size: 0.75rem; font-weight: 700; color: #f97316; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .log-item-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; padding: 4px 0; border-bottom: 1px dashed #334155; }
+    .log-item-row:last-child { border-bottom: none; }
+
+    /* Modals */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .modal { background: #1e293b; border-radius: 24px; max-width: 420px; width: 100%; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; border: 1px solid #f97316; box-shadow: 0 25px 50px -12px black; }
+    .modal-header { padding: 14px 18px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+    .modal-header h3 { font-size: 1.1rem; color: #f97316; }
+    .modal-close { background: #334155; border: none; color: white; width: 30px; height: 30px; border-radius: 50%; font-size: 1rem; cursor: pointer; }
+    .modal-body { padding: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px; font-weight: 600; }
+    .form-group select, .form-group input[type="number"] { width: 100%; background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 10px; font-size: 0.9rem; color: #fff; outline: none; }
+
+    /* Chart */
+    .chart-container { display: flex; height: 120px; align-items: flex-end; gap: 8px; padding: 18px 0 22px; border-bottom: 1px solid #334155; margin-bottom: 16px; position: relative; }
+    .chart-bar { flex: 1; border-radius: 4px 4px 0 0; position: relative; min-height: 4px; transition: height 0.4s ease; }
+    .chart-bar span { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 0.52rem; color: #94a3b8; font-weight: bold; white-space: nowrap; }
+    .chart-bar .chart-date { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 0.52rem; color: #cbd5e1; white-space: nowrap; }
+    .goal-line { position: absolute; left: 0; right: 0; border-top: 2px dashed #a3e635; z-index: 1; opacity: 0.8; pointer-events: none; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.73rem; }
+    .history-table th { background: #0f172a; padding: 8px 4px; text-align: center; color: #94a3b8; font-size: 0.68rem; position: sticky; top: 0; }
+    .history-table td { padding: 9px 4px; text-align: center; border-bottom: 1px solid #334155; }
+    .date-col { text-align: left !important; color: #94a3b8 !important; }
+    .custom-macro-input {
+      width: 100%; background: #0f172a; border: 1px solid #475569;
+      border-radius: 8px; padding: 8px; font-size: 0.85rem; color: #fff; outline: none;
+      transition: border-color 0.2s;
+    }
+    .custom-macro-input:focus { border-color: #f97316; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div class="header">
+    <h1>🍎 Calorie Tracker</h1>
+    <div class="offline-badge" id="connectionStatus">📶 Offline ready</div>
+  </div>
+
+  <div class="reset-alert" id="resetAlert">🔄 New day! Yesterday archived.</div>
+
+  <div class="daily-summary">
+    <div class="water-tracker">
+      <span class="water-label">💧 Daily Water</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="water-btn" id="waterMinus">➖</button>
+            <span class="water-count" id="waterCountDisplay">0</span>
+            <button class="water-btn" id="waterPlus">➕</button>
+          </div>
+          <span id="waterMlDisplay" style="font-size:0.65rem;color:#60a5fa;">0 ml total</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <label style="font-size:0.6rem;color:#64748b;">ml/glass</label>
+          <input type="number" id="mlPerGlass" value="250" min="50" max="1000" step="50"
+            style="width:54px;background:#0f172a;border:1px solid #475569;border-radius:8px;padding:3px 6px;font-size:0.75rem;color:#fff;text-align:center;outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <div class="calorie-row">
+      <div class="calorie-circle">
+        <span id="totalCaloriesDisplay" class="calorie-number">0</span>
+        <span class="calorie-label">kcal</span>
+      </div>
+      <div class="goal-info">
+        <span style="font-size:0.75rem;color:#cbd5e1;">🎯 Daily Target</span>
+        <div class="goal-edit">
+          <input type="number" id="goalInput" class="goal-input" value="2000" min="100" max="10000" step="50">
+          <button id="goalSetBtn" class="goal-set-btn">Set</button>
+          <button id="openGoalsBtn" class="calc-tdee-btn">🎯 Goals</button>
+        </div>
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+        <span id="remainingText" style="font-size:0.7rem;color:#94a3b8;">remaining 2000</span>
+      </div>
+    </div>
+
+    <div class="date-display" id="dateDisplay"></div>
+
+    <div class="macro-goals-row">
+      <div class="macro-goal-item">
+        <div class="macro-label protein-color">🥩 Protein</div>
+        <div class="macro-values"><span id="totalProtein">0</span>/<input type="number" id="proteinGoalInput" class="macro-input" value="150">g</div>
+        <button class="macro-set-btn" id="proteinSetBtn">Set</button>
+      </div>
+      <div class="macro-goal-item">
+        <div class="macro-label carbs-color">🍞 Carbs</div>
+        <div class="macro-values"><span id="totalCarbs">0</span>/<input type="number" id="carbsGoalInput" class="macro-input" value="250">g</div>
+        <button class="macro-set-btn" id="carbsSetBtn">Set</button>
+      </div>
+      <div class="macro-goal-item">
+        <div class="macro-label fat-color">🧈 Fat</div>
+        <div class="macro-values"><span id="totalFat">0</span>/<input type="number" id="fatGoalInput" class="macro-input" value="65">g</div>
+        <button class="macro-set-btn" id="fatSetBtn">Set</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="day-mode-bar">
+    <button class="day-mode-btn active" id="workoutDayBtn">🏋️ Workout Day</button>
+    <button class="day-mode-btn" id="restDayBtn">😴 Rest Day</button>
+  </div>
+
+  <div class="meal-selector-row">
+    <span style="font-size:0.8rem;color:#94a3b8;font-weight:600;">Log items to:</span>
+    <select id="activeMealSelector" class="meal-select">
+      <option value="Breakfast">🍳 Breakfast</option>
+      <option value="Lunch">🥗 Lunch</option>
+      <option value="Dinner">🍲 Dinner</option>
+      <option value="Snacks">🥨 Snacks</option>
+    </select>
+  </div>
+
+  <div class="search-section">
+    <div class="search-box">
+      <input type="text" id="foodSearchInput" class="search-input" placeholder="Search (empty = recent foods)..." autocomplete="off">
+      <button id="searchButton" class="search-btn">🔍</button>
+    </div>
+    <div id="searchStatus" style="font-size:0.73rem;color:#94a3b8;margin-left:6px;">📋 Showing recent/popular items</div>
+  </div>
+
+  <div class="custom-add-section">
+    <div class="custom-title">✏️ Add Custom Food Manually</div>
+    <div class="custom-row">
+      <input type="text" id="customFoodName" class="custom-input" placeholder="Name" style="flex:2;">
+      <input type="number" id="customCalories" class="custom-input" placeholder="Cal">
+      <input type="number" id="customProtein" class="custom-input" placeholder="P">
+      <input type="number" id="customCarbs" class="custom-input" placeholder="C">
+      <input type="number" id="customFat" class="custom-input" placeholder="F">
+      <input type="text" id="customServing" class="custom-input" placeholder="100g">
+      <button id="customAddBtn" class="custom-add-btn">+ Add</button>
+    </div>
+  </div>
+
+  <div class="food-list" id="foodResultsContainer"></div>
+
+  <div class="log-section">
+    <div class="log-title">
+      📋 Today's Log
+      <div class="log-btn-group">
+        <button id="endLogBtn" class="end-log-btn">✅ End Day</button>
+        <button id="logHistoryBtn" class="log-history-btn">📊 History</button>
+        <button id="clearLogBtn" class="reset-btn">Clear</button>
+      </div>
+    </div>
+    <div id="todayLogContainer"></div>
+  </div>
+</div>
+
+<div id="goalsModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🎯 Set My Daily Goals</h3>
+      <button class="modal-close" id="closeGoalsBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.75rem;color:#94a3b8;margin-bottom:14px;line-height:1.5;">
+        Set separate goals for workout days and rest days. The app remembers both and switches when you tap the toggle.
+      </p>
+
+      <div style="background:#0f172a;border-radius:14px;padding:14px;margin-bottom:12px;border-left:4px solid #f97316;">
+        <div style="font-size:0.85rem;font-weight:700;color:#f97316;margin-bottom:12px;">🏋️ Workout Day Goals</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:0.7rem;color:#94a3b8;display:block;margin-bottom:4px;">Calories (kcal)</label>
+            <input type="number" id="gw-cal" class="custom-macro-input" placeholder="e.g. 2500">
+          </div>
+          <div>
+            <label style="font-size:0.7rem;color:#3b82f6;display:block;margin-bottom:4px;">Protein (g)</label>
+            <input type="number" id="gw-prot" class="custom-macro-input" placeholder="e.g. 130">
+          </div>
+          <div>
+            <label style="font-size:0.7rem;color:#f59e0b;display:block;margin-bottom:4px;">Carbs (g)</label>
+            <input type="number" id="gw-carbs" class="custom-macro-input" placeholder="e.g. 200">
+          </div>
+          <div>
+            <label style="font-size:0.7rem;color:#ef4444;display:block;margin-bottom:4px;">Fat (g)</label>
+            <input type="number" id="gw-fat" class="custom-macro-input" placeholder="e.g. 90">
+          </div>
+        </div>
+        <div id="gw-check" style="margin-top:10px;font-size:0.68rem;padding:6px 10px;border-radius:8px;background:#1e293b;color:#64748b;">
+          Macro total: <span id="gw-macro-cal">—</span>
+        </div>
+      </div>
+
+      <div style="background:#0f172a;border-radius:14px;padding:14px;margin-bottom:14px;border-left:4px solid #3b82f6;">
+        <div style="font-size:0.85rem;font-weight:700;color:#60a5fa;margin-bottom:12px;">😴 Rest Day Goals</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:0.7rem;color:#94a3b8;display:block;margin-bottom:4px;">Calories (kcal)</label>
+            <input type="number" id="gr-cal" class="custom-macro-input" placeholder="e.g. 2200">
+          </div>
+          <div>
+            <label style="font-size:0.7rem;color:#3b82f6;display:block;margin-bottom:4px;">Protein (g)</label>
+            <input type="number" id="gr-prot" class="custom-macro-input" placeholder="e.g. 130">
+          </div>
+          <div>
+            <label style="font-size:0.7rem;color:#f59e0b;display:block;margin-bottom:4px;">Carbs (g)</label>
+            <input type="number" id="gr-carbs" class="custom-macro-input" placeholder="e.g. 150">
+          </div>
+          <div>
+            <label style="font-size:0.7rem;color:#ef4444;display:block;margin-bottom:4px;">Fat (g)</label>
+            <input type="number" id="gr-fat" class="custom-macro-input" placeholder="e.g. 100">
+          </div>
+        </div>
+        <div id="gr-check" style="margin-top:10px;font-size:0.68rem;padding:6px 10px;border-radius:8px;background:#1e293b;color:#64748b;">
+          Macro total: <span id="gr-macro-cal">—</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button onclick="saveGoals('workout')" style="flex:1;background:#f97316;border:none;color:white;padding:11px;border-radius:12px;font-weight:700;font-size:0.85rem;cursor:pointer;">
+          Save & Apply Workout
+        </button>
+        <button onclick="saveGoals('rest')" style="flex:1;background:#3b82f6;border:none;color:white;padding:11px;border-radius:12px;font-weight:700;font-size:0.85rem;cursor:pointer;">
+          Save & Apply Rest
+        </button>
+      </div>
+      <button onclick="saveGoals('both')" style="width:100%;background:#1e293b;border:1px solid #475569;color:#cbd5e1;padding:10px;border-radius:12px;font-weight:600;font-size:0.82rem;cursor:pointer;">
+        💾 Save Both (apply current day type)
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── MASSIVE AUSTRALIAN OFFLINE DATABASE ─────────────────────────────────────
+  const OFFLINE_DATABASE = [
+
+    // ── COFFEE & CAFE DRINKS (Australian-specific) ──────────────────────────
+    { name: "Almond Latte Small (Milklab)", serving: "1 small (200ml)", calories: 78, protein: 2.4, carbs: 6.2, fat: 5.2 },
+    { name: "Almond Latte Medium (Milklab)", serving: "1 medium (300ml)", calories: 117, protein: 3.6, carbs: 9.3, fat: 7.8 },
+    { name: "Almond Latte Large (Milklab)", serving: "1 large (400ml)", calories: 156, protein: 4.8, carbs: 12.4, fat: 10.4 },
+    { name: "Flat White (Full Cream Milk)", serving: "1 cup (220ml)", calories: 148, protein: 8.1, carbs: 11.4, fat: 7.9 },
+    { name: "Flat White (Skim Milk)", serving: "1 cup (220ml)", calories: 98, protein: 9.2, carbs: 13.1, fat: 0.4 },
+    { name: "Flat White (Oat Milk)", serving: "1 cup (220ml)", calories: 114, protein: 4.8, carbs: 14.6, fat: 4.4 },
+    { name: "Flat White (Soy Milk)", serving: "1 cup (220ml)", calories: 122, protein: 8.8, carbs: 11.9, fat: 4.6 },
+    { name: "Cappuccino (Full Cream)", serving: "1 cup (220ml)", calories: 118, protein: 6.4, carbs: 9.0, fat: 6.2 },
+    { name: "Cappuccino (Almond Milk)", serving: "1 cup (220ml)", calories: 72, protein: 2.2, carbs: 5.8, fat: 4.8 },
+    { name: "Long Black", serving: "1 cup (300ml)", calories: 5, protein: 0.3, carbs: 0.7, fat: 0.1 },
+    { name: "Short Black / Espresso", serving: "1 shot (30ml)", calories: 2, protein: 0.1, carbs: 0.3, fat: 0.1 },
+    { name: "Double Espresso", serving: "2 shots (60ml)", calories: 4, protein: 0.2, carbs: 0.6, fat: 0.1 },
+    { name: "Latte (Full Cream)", serving: "1 cup (300ml)", calories: 183, protein: 9.4, carbs: 13.8, fat: 9.7 },
+    { name: "Latte (Skim Milk)", serving: "1 cup (300ml)", calories: 120, protein: 11.1, carbs: 16.5, fat: 0.5 },
+    { name: "Latte (Oat Milk)", serving: "1 cup (300ml)", calories: 143, protein: 5.8, carbs: 18.4, fat: 5.5 },
+    { name: "Latte (Soy Milk)", serving: "1 cup (300ml)", calories: 152, protein: 10.8, carbs: 14.8, fat: 5.7 },
+    { name: "Macchiato (Full Cream)", serving: "1 cup (60ml)", calories: 24, protein: 1.3, carbs: 1.9, fat: 1.3 },
+    { name: "Mocha (Full Cream)", serving: "1 cup (300ml)", calories: 228, protein: 9.1, carbs: 26.4, fat: 9.8 },
+    { name: "Hot Chocolate (Full Cream)", serving: "1 cup (300ml)", calories: 248, protein: 9.2, carbs: 32.1, fat: 9.6 },
+    { name: "Chai Latte (Full Cream)", serving: "1 cup (300ml)", calories: 214, protein: 7.8, carbs: 28.4, fat: 8.2 },
+    { name: "Chai Latte (Almond Milk)", serving: "1 cup (300ml)", calories: 162, protein: 2.9, carbs: 27.6, fat: 5.9 },
+    { name: "Iced Coffee (Full Cream, cafe)", serving: "1 glass (400ml)", calories: 290, protein: 9.2, carbs: 28.4, fat: 14.6 },
+    { name: "Iced Latte (Full Cream)", serving: "1 glass (350ml)", calories: 198, protein: 9.8, carbs: 16.2, fat: 9.4 },
+    { name: "Iced Latte (Almond Milk)", serving: "1 glass (350ml)", calories: 112, protein: 3.2, carbs: 11.4, fat: 6.8 },
+    { name: "Cold Brew Coffee (Black)", serving: "1 cup (250ml)", calories: 10, protein: 0.5, carbs: 1.2, fat: 0.1 },
+    { name: "Milklab Almond Milk", serving: "100ml", calories: 37, protein: 0.8, carbs: 2.7, fat: 2.8 },
+    { name: "Milklab Oat Milk", serving: "100ml", calories: 52, protein: 1.6, carbs: 7.6, fat: 1.6 },
+    { name: "Milklab Macadamia Milk", serving: "100ml", calories: 40, protein: 0.4, carbs: 3.2, fat: 2.9 },
+    { name: "Bonsoy Soy Milk", serving: "100ml", calories: 60, protein: 3.5, carbs: 5.8, fat: 2.4 },
+    { name: "Silk Unsweetened Almond Milk", serving: "100ml", calories: 13, protein: 0.4, carbs: 0.4, fat: 1.1 },
+
+    // ── AUSTRALIAN SUPERMARKET STAPLES ──────────────────────────────────────
+    { name: "Weet-Bix (Sanitarium)", serving: "2 biscuits (30g)", calories: 104, protein: 3.6, carbs: 19.4, fat: 0.5 },
+    { name: "Weet-Bix Blends Hi-Bran", serving: "2 biscuits (30g)", calories: 107, protein: 3.8, carbs: 18.2, fat: 1.0 },
+    { name: "Uncle Tobys Rolled Oats (Dry)", serving: "100g", calories: 371, protein: 13.1, carbs: 60.4, fat: 6.9 },
+    { name: "Uncle Tobys Plus Iron Oats (Dry)", serving: "100g", calories: 367, protein: 12.8, carbs: 61.2, fat: 6.4 },
+    { name: "Vita Brits (Weet-Bix style)", serving: "2 biscuits (30g)", calories: 102, protein: 3.5, carbs: 19.2, fat: 0.6 },
+    { name: "Special K Original (Kellogg's)", serving: "100g", calories: 376, protein: 15.6, carbs: 68.6, fat: 1.6 },
+    { name: "Corn Flakes (Kellogg's)", serving: "100g", calories: 360, protein: 7.9, carbs: 80.1, fat: 0.4 },
+    { name: "All-Bran (Kellogg's)", serving: "100g", calories: 272, protein: 12.0, carbs: 42.2, fat: 3.9 },
+    { name: "Sultana Bran (Kellogg's)", serving: "100g", calories: 339, protein: 8.3, carbs: 66.2, fat: 2.4 },
+    { name: "Muesli (Sanitarium Natural)", serving: "100g", calories: 378, protein: 10.2, carbs: 58.8, fat: 10.2 },
+    { name: "Up & Go Chocolate (Sanitarium)", serving: "1 pack (250ml)", calories: 185, protein: 8.8, carbs: 28.3, fat: 3.5 },
+    { name: "Up & Go Vanilla (Sanitarium)", serving: "1 pack (250ml)", calories: 185, protein: 8.8, carbs: 28.3, fat: 3.5 },
+    { name: "Up & Go Energize Choc (350ml)", serving: "1 pack (350ml)", calories: 259, protein: 12.3, carbs: 39.6, fat: 4.9 },
+    { name: "Bega Peanut Butter (Smooth)", serving: "100g", calories: 588, protein: 25.0, carbs: 16.4, fat: 49.8 },
+    { name: "Bega Peanut Butter (Crunchy)", serving: "100g", calories: 588, protein: 24.5, carbs: 17.2, fat: 49.4 },
+    { name: "Vegemite", serving: "100g", calories: 173, protein: 26.3, carbs: 18.2, fat: 0.7 },
+    { name: "Vegemite (1 tsp spread)", serving: "5g", calories: 9, protein: 1.3, carbs: 0.9, fat: 0.04 },
+    { name: "Promite", serving: "100g", calories: 202, protein: 8.3, carbs: 35.8, fat: 2.0 },
+    { name: "Milo (Powder)", serving: "100g", calories: 388, protein: 10.5, carbs: 65.8, fat: 6.8 },
+    { name: "Milo (3 tsp in skim milk 250ml)", serving: "1 serve", calories: 165, protein: 11.2, carbs: 24.8, fat: 1.2 },
+    { name: "Arnott's Vita-Weat (Original)", serving: "100g", calories: 380, protein: 11.4, carbs: 68.0, fat: 4.4 },
+    { name: "Arnott's Vita-Weat (4 crackers)", serving: "4 crackers (21g)", calories: 80, protein: 2.4, carbs: 14.3, fat: 0.9 },
+    { name: "Arnott's Shapes Originals BBQ", serving: "100g", calories: 487, protein: 8.5, carbs: 63.1, fat: 22.4 },
+    { name: "Arnott's Tim Tam (Original)", serving: "1 biscuit (18g)", calories: 94, protein: 1.2, carbs: 12.1, fat: 4.6 },
+    { name: "Arnott's Tim Tam (per 100g)", serving: "100g", calories: 520, protein: 6.8, carbs: 67.2, fat: 25.8 },
+    { name: "Arnott's Iced VoVo", serving: "1 biscuit (17g)", calories: 72, protein: 0.8, carbs: 11.8, fat: 2.4 },
+    { name: "Arnott's Scotch Finger", serving: "1 biscuit (17g)", calories: 86, protein: 1.0, carbs: 10.8, fat: 4.3 },
+    { name: "Arnott's Milk Coffee Biscuit", serving: "2 biscuits (16g)", calories: 73, protein: 1.2, carbs: 11.4, fat: 2.4 },
+
+    // ── BREAD & BAKERY (Australian brands) ───────────────────────────────────
+    { name: "Tip Top 9 Grain Bread", serving: "1 slice (38g)", calories: 89, protein: 4.0, carbs: 14.6, fat: 1.4 },
+    { name: "Tip Top Original White Bread", serving: "1 slice (33g)", calories: 83, protein: 2.9, carbs: 15.6, fat: 0.8 },
+    { name: "Helgas Mixed Grain Bread", serving: "1 slice (43g)", calories: 100, protein: 4.3, carbs: 15.8, fat: 2.0 },
+    { name: "Bürgen Soy-Lin Bread", serving: "1 slice (44g)", calories: 104, protein: 5.4, carbs: 14.2, fat: 2.8 },
+    { name: "Wonder White Bread", serving: "1 slice (33g)", calories: 82, protein: 3.0, carbs: 15.2, fat: 0.8 },
+    { name: "Sourdough Bread (bakery style)", serving: "1 slice (60g)", calories: 158, protein: 6.0, carbs: 30.4, fat: 0.8 },
+    { name: "Mountain Bread Wrap (Original)", serving: "1 wrap (30g)", calories: 79, protein: 3.0, carbs: 15.0, fat: 0.5 },
+    { name: "Helgas Gluten Free Bread", serving: "1 slice (33g)", calories: 80, protein: 1.9, carbs: 14.8, fat: 1.4 },
+    { name: "Croissant (plain, large)", serving: "1 large (80g)", calories: 316, protein: 6.6, carbs: 32.4, fat: 18.2 },
+    { name: "Croissant (small)", serving: "1 small (47g)", calories: 186, protein: 3.9, carbs: 19.0, fat: 10.7 },
+    { name: "English Muffin (Thomas')", serving: "1 muffin (56g)", calories: 120, protein: 4.5, carbs: 22.8, fat: 1.0 },
+    { name: "Bagel (plain, large)", serving: "1 bagel (105g)", calories: 270, protein: 10.5, carbs: 53.0, fat: 1.5 },
+    { name: "Pita Bread (Lebanese style)", serving: "1 round (65g)", calories: 165, protein: 5.8, carbs: 32.4, fat: 0.8 },
+
+    // ── DAIRY & DAIRY ALTERNATIVES ────────────────────────────────────────────
+    { name: "Full Cream Milk (Woolworths/Coles)", serving: "100ml", calories: 64, protein: 3.2, carbs: 4.8, fat: 3.6 },
+    { name: "Skim Milk", serving: "100ml", calories: 35, protein: 3.6, carbs: 5.0, fat: 0.1 },
+    { name: "A2 Full Cream Milk", serving: "100ml", calories: 64, protein: 3.3, carbs: 4.9, fat: 3.6 },
+    { name: "Chobani Greek Yoghurt (Plain)", serving: "100g", calories: 86, protein: 9.6, carbs: 4.2, fat: 2.6 },
+    { name: "Chobani Greek Yoghurt (Non-Fat)", serving: "100g", calories: 62, protein: 10.2, carbs: 4.0, fat: 0.3 },
+    { name: "Chobani Greek Yoghurt (Full Fat)", serving: "100g", calories: 126, protein: 8.8, carbs: 4.1, fat: 7.2 },
+    { name: "Jalna Greek Yoghurt (Pot Set)", serving: "100g", calories: 118, protein: 5.6, carbs: 5.2, fat: 8.2 },
+    { name: "Farmers Union Greek Style Yoghurt", serving: "100g", calories: 101, protein: 5.2, carbs: 6.4, fat: 5.6 },
+    { name: "Bulla Cottage Cheese (Low Fat)", serving: "100g", calories: 88, protein: 12.8, carbs: 4.6, fat: 2.0 },
+    { name: "King Island Brie", serving: "100g", calories: 334, protein: 19.8, carbs: 0.0, fat: 28.4 },
+    { name: "Coon Tasty Cheese (shredded)", serving: "100g", calories: 404, protein: 24.8, carbs: 0.2, fat: 34.0 },
+    { name: "Bega Tasty Cheese (slice)", serving: "1 slice (21g)", calories: 85, protein: 5.2, carbs: 0.04, fat: 7.1 },
+    { name: "Kraft Single Cheese Slice", serving: "1 slice (17g)", calories: 55, protein: 3.2, carbs: 1.6, fat: 3.9 },
+    { name: "Devondale Mozzarella (block)", serving: "100g", calories: 286, protein: 21.4, carbs: 0.6, fat: 22.2 },
+    { name: "Bulla Sour Cream (Regular)", serving: "100g", calories: 238, protein: 2.5, carbs: 3.2, fat: 24.0 },
+    { name: "Bulla Thickened Cream", serving: "100g", calories: 333, protein: 2.3, carbs: 2.7, fat: 35.0 },
+    { name: "Devondale Butter (Unsalted)", serving: "100g", calories: 717, protein: 0.9, carbs: 0.1, fat: 81.0 },
+    { name: "Lurpak Butter (Salted)", serving: "100g", calories: 720, protein: 0.7, carbs: 0.5, fat: 80.0 },
+
+    // ── EGGS ──────────────────────────────────────────────────────────────────
+    { name: "Egg Whole (55g large, raw)", serving: "1 egg (55g)", calories: 78, protein: 6.7, carbs: 0.4, fat: 5.5 },
+    { name: "Egg Whole (65g extra large)", serving: "1 egg (65g)", calories: 92, protein: 7.9, carbs: 0.5, fat: 6.5 },
+    { name: "Egg White (large)", serving: "1 white (33g)", calories: 17, protein: 3.6, carbs: 0.2, fat: 0.06 },
+    { name: "Egg Yolk (large)", serving: "1 yolk (17g)", calories: 55, protein: 2.7, carbs: 0.6, fat: 4.5 },
+    { name: "Eggs (scrambled, no oil)", serving: "2 eggs (110g cooked)", calories: 182, protein: 13.0, carbs: 0.9, fat: 13.6 },
+    { name: "Eggs (poached)", serving: "2 eggs (100g)", calories: 142, protein: 12.6, carbs: 0.8, fat: 9.8 },
+
+    // ── MEAT & POULTRY (Australian cuts) ─────────────────────────────────────
+    { name: "Chicken Breast (skinless, raw)", serving: "100g", calories: 110, protein: 23.2, carbs: 0.0, fat: 1.8 },
+    { name: "Chicken Breast (skinless, cooked)", serving: "100g", calories: 165, protein: 31.0, carbs: 0.0, fat: 3.6 },
+    { name: "Chicken Thigh (skinless, raw)", serving: "100g", calories: 130, protein: 19.5, carbs: 0.0, fat: 5.7 },
+    { name: "Chicken Thigh (skin on, raw)", serving: "100g", calories: 191, protein: 17.4, carbs: 0.0, fat: 13.3 },
+    { name: "Chicken Mince (lean)", serving: "100g", calories: 134, protein: 20.4, carbs: 0.0, fat: 5.8 },
+    { name: "Chicken Drumstick (no skin, cooked)", serving: "100g", calories: 172, protein: 25.8, carbs: 0.0, fat: 7.4 },
+    { name: "Beef Mince (5% fat, lean)", serving: "100g", calories: 137, protein: 22.0, carbs: 0.0, fat: 5.4 },
+    { name: "Beef Mince (20% fat)", serving: "100g", calories: 237, protein: 17.4, carbs: 0.0, fat: 18.4 },
+    { name: "Beef Steak (rump, lean, cooked)", serving: "100g", calories: 183, protein: 30.4, carbs: 0.0, fat: 6.8 },
+    { name: "Beef Steak (sirloin, lean)", serving: "100g", calories: 177, protein: 29.2, carbs: 0.0, fat: 6.4 },
+    { name: "Beef Steak (scotch fillet)", serving: "100g", calories: 224, protein: 27.6, carbs: 0.0, fat: 12.4 },
+    { name: "Beef Stir-Fry Strips (lean, raw)", serving: "100g", calories: 128, protein: 22.0, carbs: 0.0, fat: 4.4 },
+    { name: "Lamb Chops (mid-loin, grilled)", serving: "100g", calories: 276, protein: 26.4, carbs: 0.0, fat: 18.6 },
+    { name: "Lamb Mince (lean, raw)", serving: "100g", calories: 185, protein: 18.0, carbs: 0.0, fat: 12.5 },
+    { name: "Pork Mince (lean, raw)", serving: "100g", calories: 147, protein: 19.8, carbs: 0.0, fat: 7.4 },
+    { name: "Pork Fillet (lean, cooked)", serving: "100g", calories: 181, protein: 32.4, carbs: 0.0, fat: 5.2 },
+    { name: "Pork Belly (raw, skin on)", serving: "100g", calories: 518, protein: 9.3, carbs: 0.0, fat: 53.0 },
+    { name: "Bacon (middle, grilled)", serving: "100g", calories: 271, protein: 23.8, carbs: 0.0, fat: 19.2 },
+    { name: "Bacon Rasher (1 grilled)", serving: "1 rasher (25g)", calories: 68, protein: 6.0, carbs: 0.0, fat: 4.8 },
+    { name: "Kangaroo Fillet (lean, raw)", serving: "100g", calories: 97, protein: 21.0, carbs: 0.0, fat: 0.9 },
+    { name: "Kangaroo Mince (lean)", serving: "100g", calories: 104, protein: 21.4, carbs: 0.0, fat: 1.6 },
+    { name: "Turkey Breast (lean, roasted)", serving: "100g", calories: 156, protein: 29.6, carbs: 0.0, fat: 3.5 },
+    { name: "Deli Sliced Chicken Breast", serving: "100g", calories: 103, protein: 20.5, carbs: 1.9, fat: 1.6 },
+    { name: "Salami (Hungarian style)", serving: "100g", calories: 378, protein: 21.0, carbs: 1.6, fat: 32.0 },
+    { name: "Ham (leg, sliced, lean)", serving: "100g", calories: 134, protein: 19.8, carbs: 2.2, fat: 5.2 },
+    { name: "Chorizo (cooked)", serving: "100g", calories: 350, protein: 20.4, carbs: 2.0, fat: 29.6 },
+    { name: "BBQ Chicken (whole, skin on)", serving: "100g", calories: 211, protein: 22.0, carbs: 0.8, fat: 13.4 },
+    { name: "BBQ Chicken (breast, no skin)", serving: "100g", calories: 168, protein: 29.4, carbs: 0.4, fat: 4.8 },
+
+    // ── SEAFOOD ────────────────────────────────────────────────────────────────
+    { name: "Salmon (Atlantic, cooked)", serving: "100g", calories: 206, protein: 22.0, carbs: 0.0, fat: 12.3 },
+    { name: "Salmon (raw, fresh fillet)", serving: "100g", calories: 142, protein: 19.8, carbs: 0.0, fat: 6.8 },
+    { name: "Salmon (canned in springwater)", serving: "100g", calories: 136, protein: 22.4, carbs: 0.0, fat: 5.1 },
+    { name: "Tuna (canned in water)", serving: "100g", calories: 86, protein: 19.4, carbs: 0.0, fat: 0.9 },
+    { name: "Tuna (canned in oil, drained)", serving: "100g", calories: 184, protein: 25.0, carbs: 0.0, fat: 9.2 },
+    { name: "John West Tuna (95g can, water)", serving: "1 can (95g)", calories: 82, protein: 18.4, carbs: 0.0, fat: 0.9 },
+    { name: "Barramundi (fillet, raw)", serving: "100g", calories: 84, protein: 17.2, carbs: 0.0, fat: 1.6 },
+    { name: "Barramundi (pan-fried)", serving: "100g", calories: 128, protein: 24.8, carbs: 0.0, fat: 3.4 },
+    { name: "Basa Fillet (raw)", serving: "100g", calories: 90, protein: 15.2, carbs: 0.0, fat: 2.8 },
+    { name: "Prawns (king, cooked, peeled)", serving: "100g", calories: 99, protein: 21.2, carbs: 0.0, fat: 1.0 },
+    { name: "Prawns (tiger, raw, peeled)", serving: "100g", calories: 87, protein: 18.8, carbs: 0.0, fat: 0.9 },
+    { name: "Squid (calamari, raw)", serving: "100g", calories: 73, protein: 15.6, carbs: 0.0, fat: 0.7 },
+    { name: "Canned Sardines (in tomato sauce)", serving: "100g", calories: 170, protein: 18.4, carbs: 2.8, fat: 9.4 },
+    { name: "Fish Fingers (frozen, baked)", serving: "100g", calories: 203, protein: 12.4, carbs: 19.2, fat: 8.4 },
+
+    // ── RICE, PASTA & GRAINS ──────────────────────────────────────────────────
+    { name: "White Rice (SunRice, raw)", serving: "100g", calories: 362, protein: 6.8, carbs: 79.6, fat: 0.7 },
+    { name: "White Rice (cooked)", serving: "100g", calories: 130, protein: 2.7, carbs: 28.0, fat: 0.3 },
+    { name: "Brown Rice (raw)", serving: "100g", calories: 363, protein: 7.5, carbs: 75.6, fat: 2.7 },
+    { name: "Brown Rice (cooked)", serving: "100g", calories: 111, protein: 2.6, carbs: 23.0, fat: 0.9 },
+    { name: "SunRice Microwave Cup (White, 250g)", serving: "1 cup (250g)", calories: 325, protein: 6.8, carbs: 70.0, fat: 0.8 },
+    { name: "Jasmine Rice (cooked)", serving: "100g", calories: 130, protein: 2.8, carbs: 28.2, fat: 0.3 },
+    { name: "Basmati Rice (cooked)", serving: "100g", calories: 121, protein: 2.5, carbs: 25.2, fat: 0.4 },
+    { name: "San Remo Penne (dry)", serving: "100g", calories: 353, protein: 13.0, carbs: 69.4, fat: 1.5 },
+    { name: "San Remo Spaghetti (dry)", serving: "100g", calories: 353, protein: 12.4, carbs: 70.0, fat: 1.6 },
+    { name: "Pasta (cooked, plain)", serving: "100g", calories: 158, protein: 5.8, carbs: 30.9, fat: 0.9 },
+    { name: "Quinoa (cooked)", serving: "100g", calories: 120, protein: 4.4, carbs: 21.3, fat: 1.9 },
+    { name: "Couscous (cooked)", serving: "100g", calories: 112, protein: 3.8, carbs: 23.2, fat: 0.2 },
+    { name: "Rolled Oats (Uncle Tobys, dry)", serving: "100g", calories: 371, protein: 13.1, carbs: 60.4, fat: 6.9 },
+    { name: "Oats (quick cook, dry)", serving: "40g serve", calories: 148, protein: 5.2, carbs: 24.2, fat: 2.8 },
+    { name: "Oats cooked (water)", serving: "100g", calories: 66, protein: 2.4, carbs: 11.6, fat: 1.4 },
+    { name: "Lentils (brown, cooked)", serving: "100g", calories: 116, protein: 9.0, carbs: 20.1, fat: 0.4 },
+    { name: "Lentils (red, cooked)", serving: "100g", calories: 100, protein: 7.5, carbs: 17.9, fat: 0.4 },
+    { name: "Chickpeas (canned, drained)", serving: "100g", calories: 120, protein: 7.2, carbs: 18.2, fat: 2.4 },
+    { name: "Black Beans (canned, drained)", serving: "100g", calories: 114, protein: 7.6, carbs: 19.9, fat: 0.5 },
+    { name: "Kidney Beans (canned, drained)", serving: "100g", calories: 109, protein: 7.2, carbs: 19.0, fat: 0.5 },
+    { name: "Edamame (frozen, shelled)", serving: "100g", calories: 121, protein: 11.2, carbs: 8.9, fat: 5.2 },
+    { name: "Bread Roll (white, bakery)", serving: "1 roll (60g)", calories: 152, protein: 5.4, carbs: 28.8, fat: 1.4 },
+    { name: "Noodles (2-min instant, fried)", serving: "1 packet (85g)", calories: 393, protein: 8.4, carbs: 54.3, fat: 15.6 },
+    { name: "Maggi 2-Minute Noodles (chicken)", serving: "1 packet (85g)", calories: 396, protein: 8.0, carbs: 55.1, fat: 15.3 },
+    { name: "Rice Cakes (Corn Thins style)", serving: "3 cakes (18g)", calories: 68, protein: 1.8, carbs: 14.2, fat: 0.4 },
+    { name: "Ryvita Crispbread (Dark Rye)", serving: "2 crackers (20g)", calories: 60, protein: 2.0, carbs: 11.4, fat: 0.4 },
+
+    // ── VEGETABLES (fresh & common Australian) ────────────────────────────────
+    { name: "Broccoli (raw)", serving: "100g", calories: 34, protein: 2.8, carbs: 6.6, fat: 0.4 },
+    { name: "Broccoli (steamed)", serving: "100g", calories: 35, protein: 2.4, carbs: 7.2, fat: 0.4 },
+    { name: "Cauliflower (raw)", serving: "100g", calories: 25, protein: 1.9, carbs: 5.0, fat: 0.3 },
+    { name: "Spinach (raw)", serving: "100g", calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4 },
+    { name: "Spinach (frozen, cooked)", serving: "100g", calories: 24, protein: 2.6, carbs: 3.2, fat: 0.3 },
+    { name: "Kale (raw)", serving: "100g", calories: 49, protein: 4.3, carbs: 8.8, fat: 0.9 },
+    { name: "Zucchini (raw)", serving: "100g", calories: 17, protein: 1.2, carbs: 3.1, fat: 0.3 },
+    { name: "Capsicum (red, raw)", serving: "100g", calories: 31, protein: 1.0, carbs: 6.0, fat: 0.3 },
+    { name: "Capsicum (green, raw)", serving: "100g", calories: 20, protein: 0.9, carbs: 4.6, fat: 0.2 },
+    { name: "Carrot (raw)", serving: "100g", calories: 41, protein: 0.9, carbs: 9.6, fat: 0.2 },
+    { name: "Cucumber (raw)", serving: "100g", calories: 16, protein: 0.7, carbs: 3.6, fat: 0.1 },
+    { name: "Tomato (raw)", serving: "100g", calories: 18, protein: 0.9, carbs: 3.9, fat: 0.2 },
+    { name: "Cherry Tomatoes", serving: "100g", calories: 18, protein: 0.9, carbs: 3.9, fat: 0.2 },
+    { name: "Corn (sweet, cooked cob)", serving: "100g", calories: 96, protein: 3.4, carbs: 21.0, fat: 1.5 },
+    { name: "Corn (canned, drained)", serving: "100g", calories: 82, protein: 3.0, carbs: 18.7, fat: 0.9 },
+    { name: "Peas (frozen, cooked)", serving: "100g", calories: 84, protein: 5.6, carbs: 14.4, fat: 0.4 },
+    { name: "Mushrooms (button, raw)", serving: "100g", calories: 22, protein: 3.1, carbs: 3.3, fat: 0.3 },
+    { name: "Onion (brown, raw)", serving: "100g", calories: 40, protein: 1.1, carbs: 9.3, fat: 0.1 },
+    { name: "Spring Onion (raw)", serving: "100g", calories: 32, protein: 1.8, carbs: 7.3, fat: 0.2 },
+    { name: "Celery (raw)", serving: "100g", calories: 16, protein: 0.7, carbs: 3.0, fat: 0.2 },
+    { name: "Lettuce (iceberg)", serving: "100g", calories: 14, protein: 0.9, carbs: 2.9, fat: 0.1 },
+    { name: "Lettuce (cos/romaine)", serving: "100g", calories: 17, protein: 1.2, carbs: 3.3, fat: 0.3 },
+    { name: "Baby Spinach Leaves", serving: "100g", calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4 },
+    { name: "Broccolini (raw)", serving: "100g", calories: 35, protein: 3.1, carbs: 6.8, fat: 0.5 },
+    { name: "Asparagus (cooked)", serving: "100g", calories: 20, protein: 2.2, carbs: 3.4, fat: 0.2 },
+    { name: "Green Beans (cooked)", serving: "100g", calories: 31, protein: 1.8, carbs: 7.1, fat: 0.1 },
+    { name: "Pumpkin/Squash (butternut, cooked)", serving: "100g", calories: 45, protein: 1.4, carbs: 10.5, fat: 0.1 },
+    { name: "Sweet Potato (cooked)", serving: "100g", calories: 90, protein: 2.0, carbs: 20.7, fat: 0.2 },
+    { name: "Potato (white, boiled)", serving: "100g", calories: 78, protein: 1.9, carbs: 17.5, fat: 0.1 },
+    { name: "Potato (baked in skin)", serving: "100g", calories: 93, protein: 2.5, carbs: 20.4, fat: 0.1 },
+    { name: "Potato Wedges (baked, no oil)", serving: "100g", calories: 104, protein: 2.8, carbs: 24.2, fat: 0.1 },
+    { name: "Eggplant/Aubergine (raw)", serving: "100g", calories: 25, protein: 1.0, carbs: 5.9, fat: 0.2 },
+    { name: "Bok Choy (raw)", serving: "100g", calories: 13, protein: 1.5, carbs: 2.2, fat: 0.2 },
+    { name: "Coleslaw mix (raw, no dressing)", serving: "100g", calories: 25, protein: 1.2, carbs: 5.7, fat: 0.1 },
+    { name: "Frozen Mixed Vegetables (cooked)", serving: "100g", calories: 64, protein: 3.5, carbs: 13.0, fat: 0.4 },
+    { name: "Avocado (Hass)", serving: "100g", calories: 160, protein: 2.0, carbs: 9.0, fat: 15.0 },
+    { name: "Avocado (half, ~75g)", serving: "½ avocado (75g)", calories: 120, protein: 1.5, carbs: 6.8, fat: 11.3 },
+
+    // ── FRUIT ──────────────────────────────────────────────────────────────────
+    { name: "Apple (red, medium)", serving: "1 medium (182g)", calories: 95, protein: 0.5, carbs: 25.1, fat: 0.3 },
+    { name: "Banana (medium)", serving: "1 medium (118g)", calories: 105, protein: 1.3, carbs: 27.0, fat: 0.4 },
+    { name: "Banana (small, 90g)", serving: "1 small (90g)", calories: 80, protein: 1.0, carbs: 20.5, fat: 0.3 },
+    { name: "Strawberries", serving: "100g", calories: 32, protein: 0.7, carbs: 7.7, fat: 0.3 },
+    { name: "Blueberries", serving: "100g", calories: 57, protein: 0.7, carbs: 14.5, fat: 0.3 },
+    { name: "Raspberries", serving: "100g", calories: 52, protein: 1.2, carbs: 11.9, fat: 0.7 },
+    { name: "Grapes (green, seedless)", serving: "100g", calories: 67, protein: 0.6, carbs: 17.2, fat: 0.4 },
+    { name: "Orange (medium)", serving: "1 medium (131g)", calories: 62, protein: 1.2, carbs: 15.4, fat: 0.2 },
+    { name: "Mandarin (medium)", serving: "1 medium (88g)", calories: 47, protein: 0.7, carbs: 11.7, fat: 0.3 },
+    { name: "Mango (fresh)", serving: "100g", calories: 60, protein: 0.8, carbs: 14.8, fat: 0.4 },
+    { name: "Watermelon", serving: "100g", calories: 30, protein: 0.6, carbs: 7.6, fat: 0.2 },
+    { name: "Pineapple (fresh)", serving: "100g", calories: 50, protein: 0.5, carbs: 13.1, fat: 0.1 },
+    { name: "Kiwifruit (green)", serving: "1 fruit (69g)", calories: 42, protein: 0.8, carbs: 10.1, fat: 0.4 },
+    { name: "Pear (medium)", serving: "1 medium (178g)", calories: 101, protein: 0.6, carbs: 27.1, fat: 0.2 },
+    { name: "Rockmelon (cantaloupe)", serving: "100g", calories: 34, protein: 0.8, carbs: 8.2, fat: 0.2 },
+    { name: "Peach (medium)", serving: "1 medium (150g)", calories: 59, protein: 1.4, carbs: 14.3, fat: 0.4 },
+    { name: "Dates (Medjool)", serving: "100g", calories: 277, protein: 1.8, carbs: 75.0, fat: 0.2 },
+    { name: "Frozen Mixed Berries", serving: "100g", calories: 40, protein: 0.8, carbs: 9.2, fat: 0.4 },
+
+    // ── NUTS & SEEDS ──────────────────────────────────────────────────────────
+    { name: "Almonds (raw)", serving: "100g", calories: 579, protein: 21.2, carbs: 21.6, fat: 49.9 },
+    { name: "Almonds (10 nuts ~14g)", serving: "10 almonds (14g)", calories: 81, protein: 3.0, carbs: 3.0, fat: 7.0 },
+    { name: "Cashews (raw)", serving: "100g", calories: 553, protein: 18.2, carbs: 30.2, fat: 43.9 },
+    { name: "Walnuts", serving: "100g", calories: 654, protein: 15.2, carbs: 13.7, fat: 65.2 },
+    { name: "Macadamia Nuts (raw)", serving: "100g", calories: 718, protein: 7.9, carbs: 13.8, fat: 75.8 },
+    { name: "Peanuts (dry roasted, unsalted)", serving: "100g", calories: 585, protein: 23.7, carbs: 21.5, fat: 49.7 },
+    { name: "Pistachios (shelled)", serving: "100g", calories: 562, protein: 20.2, carbs: 27.2, fat: 45.4 },
+    { name: "Sunflower Seeds", serving: "100g", calories: 584, protein: 20.8, carbs: 20.0, fat: 51.5 },
+    { name: "Pumpkin Seeds (pepitas)", serving: "100g", calories: 559, protein: 30.2, carbs: 10.7, fat: 49.1 },
+    { name: "Chia Seeds", serving: "100g", calories: 486, protein: 16.5, carbs: 42.1, fat: 30.7 },
+    { name: "Flaxseeds (linseeds)", serving: "100g", calories: 534, protein: 18.3, carbs: 28.9, fat: 42.2 },
+    { name: "Mixed Nuts (roasted)", serving: "100g", calories: 607, protein: 16.8, carbs: 18.8, fat: 54.8 },
+    { name: "Trail Mix (nut & dried fruit)", serving: "100g", calories: 484, protein: 11.2, carbs: 48.2, fat: 29.4 },
+
+    // ── OILS, SAUCES & CONDIMENTS ─────────────────────────────────────────────
+    { name: "Olive Oil (extra virgin)", serving: "100g", calories: 884, protein: 0.0, carbs: 0.0, fat: 100.0 },
+    { name: "Olive Oil (1 tbsp)", serving: "1 tbsp (14g)", calories: 119, protein: 0.0, carbs: 0.0, fat: 13.5 },
+    { name: "Coconut Oil", serving: "100g", calories: 862, protein: 0.0, carbs: 0.0, fat: 100.0 },
+    { name: "Coconut Oil (1 tsp)", serving: "1 tsp (4.5g)", calories: 39, protein: 0.0, carbs: 0.0, fat: 4.5 },
+    { name: "Avocado Oil", serving: "100g", calories: 884, protein: 0.0, carbs: 0.0, fat: 100.0 },
+    { name: "Mayonnaise (Kewpie)", serving: "100g", calories: 640, protein: 1.4, carbs: 2.0, fat: 70.0 },
+    { name: "Tomato Sauce / Ketchup (Heinz)", serving: "100g", calories: 112, protein: 1.4, carbs: 26.6, fat: 0.2 },
+    { name: "Tomato Sauce (1 tbsp)", serving: "1 tbsp (17g)", calories: 19, protein: 0.2, carbs: 4.5, fat: 0.04 },
+    { name: "BBQ Sauce (Masterfoods)", serving: "100g", calories: 190, protein: 2.4, carbs: 43.6, fat: 0.8 },
+    { name: "Soy Sauce (Kikkoman)", serving: "100ml", calories: 60, protein: 8.0, carbs: 5.6, fat: 0.1 },
+    { name: "Soy Sauce (1 tbsp)", serving: "1 tbsp (15ml)", calories: 9, protein: 1.2, carbs: 0.8, fat: 0.02 },
+    { name: "Sweet Chilli Sauce", serving: "100g", calories: 192, protein: 0.4, carbs: 47.2, fat: 0.4 },
+    { name: "Sriracha Hot Sauce", serving: "100g", calories: 93, protein: 1.6, carbs: 18.0, fat: 1.2 },
+    { name: "Hummus (store bought)", serving: "100g", calories: 166, protein: 7.9, carbs: 14.3, fat: 9.6 },
+    { name: "Guacamole (store bought)", serving: "100g", calories: 152, protein: 1.8, carbs: 8.2, fat: 13.4 },
+    { name: "Salsa (tomato, fresh)", serving: "100g", calories: 32, protein: 1.2, carbs: 6.8, fat: 0.2 },
+    { name: "Mustard (Dijon)", serving: "100g", calories: 155, protein: 9.9, carbs: 5.8, fat: 10.9 },
+    { name: "Pesto (basil, jar)", serving: "100g", calories: 451, protein: 10.4, carbs: 5.8, fat: 43.2 },
+    { name: "Tahini", serving: "100g", calories: 592, protein: 17.0, carbs: 21.2, fat: 53.8 },
+    { name: "Tzatziki", serving: "100g", calories: 88, protein: 4.4, carbs: 4.0, fat: 6.2 },
+    { name: "Oyster Sauce", serving: "100g", calories: 104, protein: 2.4, carbs: 23.2, fat: 0.2 },
+    { name: "Fish Sauce", serving: "100ml", calories: 35, protein: 4.8, carbs: 3.6, fat: 0.0 },
+    { name: "Coconut Cream", serving: "100g", calories: 230, protein: 2.3, carbs: 5.9, fat: 23.8 },
+    { name: "Coconut Milk (canned)", serving: "100ml", calories: 154, protein: 1.6, carbs: 3.4, fat: 15.9 },
+    { name: "Pasta Sauce (Leggo's Tomato)", serving: "100g", calories: 62, protein: 2.2, carbs: 11.0, fat: 1.0 },
+    { name: "Diced Tomatoes (canned)", serving: "100g", calories: 24, protein: 1.0, carbs: 4.8, fat: 0.2 },
+
+    // ── PROTEIN POWDERS & SUPPLEMENTS ─────────────────────────────────────────
+    { name: "Whey Protein Isolate (1 scoop)", serving: "30g", calories: 112, protein: 27.0, carbs: 1.2, fat: 0.4 },
+    { name: "Whey Protein Concentrate (1 scoop)", serving: "30g", calories: 119, protein: 22.0, carbs: 4.0, fat: 2.0 },
+    { name: "EHP Labs OxyWhey (choc, 1 scoop)", serving: "37g", calories: 139, protein: 26.0, carbs: 4.0, fat: 2.0 },
+    { name: "Bulk Nutrients WPI (1 scoop)", serving: "30g", calories: 116, protein: 27.2, carbs: 0.6, fat: 0.4 },
+    { name: "True Protein WPC (1 scoop)", serving: "30g", calories: 119, protein: 22.5, carbs: 3.8, fat: 2.2 },
+    { name: "Optimum Nutrition Gold Standard WP", serving: "30g", calories: 120, protein: 24.0, carbs: 3.0, fat: 1.0 },
+    { name: "Casein Protein (1 scoop)", serving: "33g", calories: 120, protein: 24.0, carbs: 4.0, fat: 1.0 },
+    { name: "Pea Protein Isolate (1 scoop)", serving: "30g", calories: 113, protein: 24.0, carbs: 1.0, fat: 1.5 },
+    { name: "Vegan Protein Blend (1 scoop)", serving: "30g", calories: 116, protein: 22.0, carbs: 3.5, fat: 2.0 },
+    { name: "BCAA (flavoured drink)", serving: "1 serve (10g powder)", calories: 28, protein: 5.0, carbs: 1.8, fat: 0.0 },
+    { name: "Creatine Monohydrate (5g)", serving: "5g", calories: 0, protein: 0.0, carbs: 0.0, fat: 0.0 },
+
+    // ── SNACKS & PACKAGED (Australian) ────────────────────────────────────────
+    { name: "Natural Confectionery Co Snakes", serving: "100g", calories: 330, protein: 5.0, carbs: 72.0, fat: 0.5 },
+    { name: "Smith's Original Chips", serving: "100g", calories: 536, protein: 6.8, carbs: 51.2, fat: 34.0 },
+    { name: "Sakata Rice Crackers (plain)", serving: "100g", calories: 393, protein: 8.2, carbs: 79.4, fat: 4.0 },
+    { name: "Grain Waves (sea salt)", serving: "100g", calories: 468, protein: 6.8, carbs: 67.4, fat: 19.8 },
+    { name: "Burger Rings", serving: "100g", calories: 494, protein: 5.4, carbs: 65.3, fat: 23.2 },
+    { name: "Twisties (cheese)", serving: "100g", calories: 527, protein: 6.2, carbs: 59.4, fat: 29.8 },
+    { name: "Snickers Bar (52.7g)", serving: "1 bar (52.7g)", calories: 250, protein: 4.3, carbs: 33.5, fat: 11.9 },
+    { name: "Kit Kat (4 finger, 45g)", serving: "1 pack (45g)", calories: 231, protein: 3.1, carbs: 28.8, fat: 12.4 },
+    { name: "Cherry Ripe (52g)", serving: "1 bar (52g)", calories: 224, protein: 1.8, carbs: 33.8, fat: 9.6 },
+    { name: "Freddo Frog (milk choc, 12g)", serving: "1 Freddo (12g)", calories: 65, protein: 0.9, carbs: 7.6, fat: 3.5 },
+    { name: "Clinkers (Nestle)", serving: "100g", calories: 415, protein: 2.8, carbs: 86.4, fat: 7.8 },
+    { name: "Muesli Bar (Carman's Classic Fruit)", serving: "1 bar (45g)", calories: 185, protein: 4.6, carbs: 26.8, fat: 6.4 },
+    { name: "Carman's Original Muesli Bar", serving: "1 bar (45g)", calories: 195, protein: 5.4, carbs: 24.2, fat: 8.2 },
+    { name: "Uncle Tobys Muesli Bar (Choc Chip)", serving: "1 bar (31g)", calories: 131, protein: 2.1, carbs: 20.4, fat: 4.8 },
+    { name: "Apricot Fruit Roll-up", serving: "1 roll (25g)", calories: 88, protein: 0.5, carbs: 21.4, fat: 0.2 },
+    { name: "Chocolate (Cadbury Dairy Milk)", serving: "100g", calories: 534, protein: 7.6, carbs: 59.4, fat: 29.8 },
+    { name: "Chocolate (Lindt 70% Dark)", serving: "100g", calories: 563, protein: 8.9, carbs: 42.4, fat: 39.5 },
+    { name: "Dark Chocolate Square (Lindt, 10g)", serving: "1 square (10g)", calories: 56, protein: 0.9, carbs: 4.2, fat: 3.9 },
+    { name: "Allen's Party Mix", serving: "100g", calories: 339, protein: 5.6, carbs: 75.6, fat: 1.2 },
+    { name: "Popcorn (plain air-popped)", serving: "100g", calories: 387, protein: 12.9, carbs: 77.8, fat: 4.5 },
+    { name: "Popcorn (microwave, butter)", serving: "100g", calories: 424, protein: 7.2, carbs: 57.4, fat: 20.2 },
+    { name: "Protein Bar (Quest Choc Chip Cookie)", serving: "1 bar (60g)", calories: 190, protein: 21.0, carbs: 21.0, fat: 7.0 },
+    { name: "Protein Bar (Aussie Bodies)", serving: "1 bar (55g)", calories: 198, protein: 20.2, carbs: 14.8, fat: 5.4 },
+    { name: "Chobani Yoghurt Pouch (fruit)", serving: "1 pouch (170g)", calories: 140, protein: 12.0, carbs: 16.0, fat: 2.5 },
+
+    // ── FAST FOOD & TAKEAWAY (Australian chains) ──────────────────────────────
+    // McDonald's Australia
+    { name: "McDonald's McChicken Burger", serving: "1 burger (190g)", calories: 413, protein: 20.0, carbs: 42.0, fat: 18.0 },
+    { name: "McDonald's Big Mac", serving: "1 burger (219g)", calories: 508, protein: 27.0, carbs: 43.0, fat: 25.0 },
+    { name: "McDonald's Quarter Pounder", serving: "1 burger (210g)", calories: 514, protein: 31.0, carbs: 41.0, fat: 24.0 },
+    { name: "McDonald's McDouble", serving: "1 burger (166g)", calories: 397, protein: 24.0, carbs: 34.0, fat: 17.0 },
+    { name: "McDonald's Filet-O-Fish", serving: "1 burger (143g)", calories: 333, protein: 15.0, carbs: 38.0, fat: 14.0 },
+    { name: "McDonald's Chicken McNuggets (6pc)", serving: "6 pieces (106g)", calories: 256, protein: 15.0, carbs: 16.0, fat: 14.0 },
+    { name: "McDonald's Small Fries", serving: "1 serve (80g)", calories: 228, protein: 3.0, carbs: 30.0, fat: 11.0 },
+    { name: "McDonald's Medium Fries", serving: "1 serve (117g)", calories: 333, protein: 4.0, carbs: 44.0, fat: 16.0 },
+    { name: "McDonald's Large Fries", serving: "1 serve (154g)", calories: 439, protein: 5.0, carbs: 58.0, fat: 21.0 },
+    { name: "McDonald's Hash Brown", serving: "1 piece (58g)", calories: 153, protein: 2.0, carbs: 16.0, fat: 9.0 },
+    { name: "McDonald's Egg McMuffin", serving: "1 muffin (140g)", calories: 300, protein: 18.0, carbs: 29.0, fat: 12.0 },
+    { name: "McDonald's Sausage McMuffin", serving: "1 muffin (115g)", calories: 395, protein: 20.0, carbs: 29.0, fat: 22.0 },
+    { name: "McDonald's Big Breakfast", serving: "1 serve (352g)", calories: 726, protein: 34.0, carbs: 46.0, fat: 43.0 },
+    { name: "McDonald's Cheeseburger", serving: "1 burger (119g)", calories: 299, protein: 16.0, carbs: 32.0, fat: 12.0 },
+    { name: "McDonald's Strawberry Thick Shake (Medium)", serving: "1 serve (416ml)", calories: 492, protein: 11.0, carbs: 85.0, fat: 13.0 },
+    { name: "McDonald's Soft Serve (Small)", serving: "1 cone (84g)", calories: 162, protein: 4.0, carbs: 24.0, fat: 5.0 },
+    // KFC Australia
+    { name: "KFC Original Recipe Chicken (piece)", serving: "1 drumstick (111g)", calories: 243, protein: 20.0, carbs: 11.0, fat: 12.0 },
+    { name: "KFC Popcorn Chicken (large)", serving: "1 large serve (155g)", calories: 476, protein: 30.0, carbs: 27.0, fat: 27.0 },
+    { name: "KFC Zinger Burger", serving: "1 burger (229g)", calories: 542, protein: 31.0, carbs: 49.0, fat: 24.0 },
+    { name: "KFC Zinger Tower Burger", serving: "1 burger (279g)", calories: 690, protein: 38.0, carbs: 57.0, fat: 32.0 },
+    { name: "KFC Wicked Wings (per piece)", serving: "1 piece (76g)", calories: 194, protein: 14.0, carbs: 9.0, fat: 12.0 },
+    { name: "KFC Regular Chips", serving: "1 serve (130g)", calories: 356, protein: 4.0, carbs: 44.0, fat: 18.0 },
+    { name: "KFC 3-Piece Pack (Original)", serving: "3 pieces (360g)", calories: 878, protein: 72.0, carbs: 44.0, fat: 45.0 },
+    // Subway Australia
+    { name: "Subway 6-inch Chicken Teriyaki (no cheese)", serving: "1 sub (246g)", calories: 332, protein: 23.0, carbs: 50.0, fat: 5.0 },
+    { name: "Subway 6-inch Turkey Breast (no cheese)", serving: "1 sub (233g)", calories: 290, protein: 20.0, carbs: 48.0, fat: 4.0 },
+    { name: "Subway 6-inch Steak & Cheese", serving: "1 sub (257g)", calories: 390, protein: 26.0, carbs: 49.0, fat: 11.0 },
+    { name: "Subway Footlong Chicken Breast", serving: "1 footlong (440g)", calories: 560, protein: 46.0, carbs: 88.0, fat: 9.0 },
+    { name: "Subway Veggie Delite (6-inch)", serving: "1 sub (166g)", calories: 197, protein: 9.0, carbs: 39.0, fat: 2.0 },
+    // Grill'd Australia
+    { name: "Grill'd Simply Grill'd Burger (beef)", serving: "1 burger (~250g)", calories: 575, protein: 38.0, carbs: 41.0, fat: 26.0 },
+    { name: "Grill'd Mighty Melbourne Burger", serving: "1 burger (~280g)", calories: 645, protein: 42.0, carbs: 44.0, fat: 30.0 },
+    // Hungry Jack's Australia
+    { name: "Hungry Jack's Whopper", serving: "1 burger (286g)", calories: 641, protein: 31.0, carbs: 48.0, fat: 36.0 },
+    { name: "Hungry Jack's Whopper Jr.", serving: "1 burger (149g)", calories: 362, protein: 17.0, carbs: 30.0, fat: 19.0 },
+    { name: "Hungry Jack's Bacon & Egg Burger", serving: "1 burger (165g)", calories: 376, protein: 21.0, carbs: 31.0, fat: 17.0 },
+    { name: "Hungry Jack's Chicken Royale", serving: "1 burger (222g)", calories: 536, protein: 26.0, carbs: 46.0, fat: 26.0 },
+    // Nandos Australia
+    { name: "Nando's 1/4 Chicken (no skin)", serving: "1 serve (170g)", calories: 280, protein: 38.0, carbs: 2.0, fat: 13.0 },
+    { name: "Nando's Half Chicken (no skin)", serving: "1 serve (340g)", calories: 560, protein: 76.0, carbs: 4.0, fat: 26.0 },
+    { name: "Nando's Regular Chips", serving: "1 serve (190g)", calories: 494, protein: 7.0, carbs: 67.0, fat: 22.0 },
+    { name: "Nando's Chargrilled Halloumi", serving: "1 serve (80g)", calories: 256, protein: 16.0, carbs: 2.0, fat: 20.0 },
+    { name: "Nando's Coleslaw (regular)", serving: "1 serve (115g)", calories: 174, protein: 2.0, carbs: 10.0, fat: 14.0 },
+    // Domino's / Pizza Hut Australia
+    { name: "Pizza (margarita, thin crust, 1 slice)", serving: "1 slice (100g)", calories: 226, protein: 9.4, carbs: 26.8, fat: 8.8 },
+    { name: "Pizza (pepperoni, thin crust, 1 slice)", serving: "1 slice (100g)", calories: 279, protein: 11.4, carbs: 24.6, fat: 14.8 },
+    { name: "Domino's Classic Crust (1/8 pizza)", serving: "1 slice (85g)", calories: 218, protein: 9.6, carbs: 28.4, fat: 7.2 },
+    { name: "Domino's Garlic Bread (per piece)", serving: "1 piece (42g)", calories: 132, protein: 3.2, carbs: 18.4, fat: 5.0 },
+    // Cafe 63 / Australian cafe style
+    { name: "Avocado Toast (2 slices sourdough + avo)", serving: "1 serve", calories: 398, protein: 10.4, carbs: 48.2, fat: 19.2 },
+    { name: "Acai Bowl (cafe style, medium)", serving: "1 bowl (350g)", calories: 420, protein: 8.4, carbs: 72.0, fat: 12.0 },
+    { name: "Bircher Muesli (cafe, with fruit)", serving: "1 serve (280g)", calories: 394, protein: 10.4, carbs: 64.4, fat: 11.2 },
+    { name: "Eggs Benedict (cafe, 2 eggs)", serving: "1 plate (~350g)", calories: 580, protein: 28.4, carbs: 36.8, fat: 32.4 },
+    { name: "Big Breakfast (cafe style)", serving: "1 plate (~550g)", calories: 838, protein: 46.2, carbs: 44.8, fat: 52.4 },
+    { name: "Smashed Avo on Toast (cafe)", serving: "1 plate (260g)", calories: 412, protein: 11.2, carbs: 44.8, fat: 21.4 },
+    { name: "Berry Smoothie Bowl (cafe)", serving: "1 bowl (300g)", calories: 360, protein: 8.0, carbs: 62.0, fat: 9.0 },
+    { name: "Banana Bread (cafe slice)", serving: "1 thick slice (100g)", calories: 288, protein: 4.8, carbs: 46.2, fat: 9.8 },
+    { name: "Butter Croissant (cafe)", serving: "1 croissant (80g)", calories: 320, protein: 6.4, carbs: 32.8, fat: 18.2 },
+    { name: "Blueberry Muffin (cafe style)", serving: "1 muffin (130g)", calories: 432, protein: 6.2, carbs: 62.4, fat: 18.0 },
+    { name: "Long Black (cafe, no milk)", serving: "1 cup (300ml)", calories: 5, protein: 0.3, carbs: 0.7, fat: 0.1 },
+    { name: "Orange Juice (fresh squeezed, cafe)", serving: "1 glass (250ml)", calories: 113, protein: 1.8, carbs: 25.8, fat: 0.5 },
+    { name: "Green Smoothie (cafe style)", serving: "1 serve (400ml)", calories: 224, protein: 4.8, carbs: 46.4, fat: 2.4 },
+    { name: "Protein Smoothie (banana, choc, WP)", serving: "1 serve (500ml)", calories: 486, protein: 36.0, carbs: 52.0, fat: 10.0 },
+    { name: "Caesar Salad (with chicken, no dressing)", serving: "1 serve (220g)", calories: 298, protein: 26.4, carbs: 12.8, fat: 15.4 },
+    { name: "Greek Salad (no cheese)", serving: "1 serve (220g)", calories: 120, protein: 3.2, carbs: 14.4, fat: 6.4 },
+    // Sushi Train / Japanese Australian
+    { name: "Sushi (salmon nigiri, 2pc)", serving: "2 pieces (100g)", calories: 149, protein: 7.4, carbs: 22.8, fat: 2.8 },
+    { name: "Sushi (tuna nigiri, 2pc)", serving: "2 pieces (100g)", calories: 134, protein: 9.6, carbs: 21.6, fat: 0.8 },
+    { name: "Sushi (california roll, 6pc)", serving: "6 pieces (156g)", calories: 255, protein: 7.8, carbs: 37.4, fat: 7.2 },
+    { name: "Sushi (cucumber roll, 6pc)", serving: "6 pieces (120g)", calories: 164, protein: 3.6, carbs: 34.8, fat: 0.8 },
+    { name: "Edamame (half serve, cafe)", serving: "1 serve (100g)", calories: 121, protein: 11.2, carbs: 8.9, fat: 5.2 },
+    { name: "Miso Soup (restaurant, 1 bowl)", serving: "1 bowl (240ml)", calories: 55, protein: 3.0, carbs: 6.0, fat: 1.8 },
+    // Coles / Woolworths Ready Meals
+    { name: "Coles Roast Chicken (whole, per 100g)", serving: "100g", calories: 211, protein: 22.0, carbs: 0.8, fat: 13.4 },
+    { name: "Woolworths Peri Peri Chicken (100g)", serving: "100g", calories: 174, protein: 22.2, carbs: 2.8, fat: 8.4 },
+    { name: "Coles Pasta & Sauce (chicken, 400g)", serving: "1 pack (400g)", calories: 508, protein: 26.4, carbs: 62.4, fat: 14.0 },
+    { name: "Lean Cuisine Chicken & Veg (300g)", serving: "1 tray (300g)", calories: 282, protein: 20.4, carbs: 32.4, fat: 7.2 },
+
+    // ── BEVERAGES (non-coffee) ─────────────────────────────────────────────────
+    { name: "Coca-Cola (330ml can)", serving: "1 can (330ml)", calories: 139, protein: 0.0, carbs: 35.0, fat: 0.0 },
+    { name: "Coca-Cola Zero (330ml)", serving: "1 can (330ml)", calories: 1, protein: 0.0, carbs: 0.4, fat: 0.0 },
+    { name: "Pepsi Max (375ml can)", serving: "1 can (375ml)", calories: 4, protein: 0.4, carbs: 0.4, fat: 0.0 },
+    { name: "Sprite / Lemonade (375ml)", serving: "1 can (375ml)", calories: 158, protein: 0.0, carbs: 39.4, fat: 0.0 },
+    { name: "Gatorade (600ml, original)", serving: "1 bottle (600ml)", calories: 138, protein: 0.0, carbs: 34.2, fat: 0.0 },
+    { name: "Powerade (600ml, mountain blast)", serving: "1 bottle (600ml)", calories: 132, protein: 0.0, carbs: 33.0, fat: 0.0 },
+    { name: "Hydralyte Sport (1 sachet in water)", serving: "1 sachet", calories: 50, protein: 0.0, carbs: 12.4, fat: 0.0 },
+    { name: "Red Bull (250ml can)", serving: "1 can (250ml)", calories: 113, protein: 0.7, carbs: 27.5, fat: 0.0 },
+    { name: "Monster Energy (500ml)", serving: "1 can (500ml)", calories: 225, protein: 0.0, carbs: 54.5, fat: 0.0 },
+    { name: "V Energy Drink (250ml)", serving: "1 can (250ml)", calories: 113, protein: 0.0, carbs: 28.0, fat: 0.0 },
+    { name: "Juice (apple, Berri, 250ml)", serving: "1 box (250ml)", calories: 118, protein: 0.3, carbs: 28.5, fat: 0.0 },
+    { name: "Juice (orange, Tropicana, 250ml)", serving: "1 serve (250ml)", calories: 115, protein: 1.5, carbs: 26.8, fat: 0.3 },
+    { name: "Kombucha (GTs, plain, 330ml)", serving: "1 bottle (330ml)", calories: 46, protein: 0.3, carbs: 10.0, fat: 0.0 },
+    { name: "Kombucha (Remedy, 330ml)", serving: "1 bottle (330ml)", calories: 10, protein: 0.0, carbs: 2.0, fat: 0.0 },
+    { name: "Milk (full cream, glass, 250ml)", serving: "1 glass (250ml)", calories: 160, protein: 8.0, carbs: 12.0, fat: 9.0 },
+    { name: "Milk (skim, glass, 250ml)", serving: "1 glass (250ml)", calories: 88, protein: 9.0, carbs: 12.5, fat: 0.3 },
+    { name: "Protein Shake (made w/ water)", serving: "1 shaker (350ml)", calories: 140, protein: 28.0, carbs: 4.0, fat: 2.0 },
+    { name: "Protein Shake (made w/ skim milk)", serving: "1 shaker (400ml)", calories: 230, protein: 36.0, carbs: 16.5, fat: 2.5 },
+    { name: "Beer (full strength, 375ml can)", serving: "1 can (375ml)", calories: 143, protein: 1.1, carbs: 11.2, fat: 0.0 },
+    { name: "Beer (mid-strength, 375ml)", serving: "1 can (375ml)", calories: 116, protein: 0.8, carbs: 9.0, fat: 0.0 },
+    { name: "Beer (light, XXXX Gold, 375ml)", serving: "1 can (375ml)", calories: 87, protein: 0.4, carbs: 5.9, fat: 0.0 },
+    { name: "Wine (white, 150ml glass)", serving: "1 glass (150ml)", calories: 123, protein: 0.1, carbs: 3.8, fat: 0.0 },
+    { name: "Wine (red, 150ml glass)", serving: "1 glass (150ml)", calories: 128, protein: 0.1, carbs: 3.2, fat: 0.0 },
+    { name: "Vodka (30ml nip)", serving: "1 nip (30ml)", calories: 64, protein: 0.0, carbs: 0.0, fat: 0.0 },
+
+    // ── OILS & CONDIMENTS (base items) ────────────────────────────────────────
+    { name: "Olive Oil (Extra Virgin, 100g)", serving: "100g", calories: 884, protein: 0.0, carbs: 0.0, fat: 100.0 },
+    { name: "Peanut Butter (Smooth, 100g)", serving: "100g", calories: 588, protein: 25.0, carbs: 20.0, fat: 50.0 },
+
+    // ── MEAL PREP / HIGH PROTEIN MEALS ───────────────────────────────────────
+    { name: "Chicken & Rice Bowl (200g chicken, 200g rice)", serving: "1 bowl", calories: 640, protein: 66.0, carbs: 56.0, fat: 7.2 },
+    { name: "Tuna & Rice (95g tuna can + 200g cooked rice)", serving: "1 bowl", calories: 342, protein: 28.0, carbs: 56.0, fat: 1.8 },
+    { name: "Oatmeal with Banana (80g oats + 1 banana)", serving: "1 bowl", calories: 380, protein: 11.0, carbs: 70.8, fat: 5.5 },
+    { name: "Greek Yoghurt with Berries (200g yoghurt + 100g berries)", serving: "1 bowl", calories: 186, protein: 20.0, carbs: 19.0, fat: 3.0 },
+    { name: "Overnight Oats (80g oats + 200ml almond milk)", serving: "1 serve", calories: 370, protein: 12.6, carbs: 59.4, fat: 9.7 },
+    { name: "Scrambled Eggs on Toast (3 eggs + 2 slices)", serving: "1 plate", calories: 492, protein: 29.4, carbs: 32.6, fat: 25.2 },
+    { name: "Chicken Salad (150g chicken + salad, no dressing)", serving: "1 plate", calories: 284, protein: 46.5, carbs: 8.4, fat: 7.4 },
+    { name: "Beef & Veg Stir-fry (150g beef + mixed veg)", serving: "1 plate", calories: 342, protein: 38.4, carbs: 16.2, fat: 13.6 },
+    { name: "Salmon & Broccoli (150g salmon + 150g broccoli)", serving: "1 plate", calories: 372, protein: 40.6, carbs: 10.8, fat: 19.2 },
+    { name: "Protein Pancakes (2 eggs + 1 scoop WP + 40g oats)", serving: "1 serve", calories: 412, protein: 42.0, carbs: 32.4, fat: 10.4 },
+  ];
+
+  // ── STATE ───────────────────────────────────────────────────────────────────
+  let userDatabase = [], recentFoods = [], todaysLog = [], dailyHistory = [];
+  let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
+  let dailyGoal = 2000, proteinGoal = 150, carbsGoal = 250, fatGoal = 65;
+  let waterCount = 0, mlPerGlass = 250;
+  let currentDayType = 'workout'; 
+  let workoutGoals = { cal: 2500, prot: 150, carbs: 250, fat: 80 };
+  let restGoals    = { cal: 2200, prot: 150, carbs: 180, fat: 90 };
+
+  function getFullDB() { return [...userDatabase, ...OFFLINE_DATABASE]; }
+
+  // ── STORAGE ──────────────────────────────────────────────────────────────────
+  function saveState() {
+    localStorage.setItem('calorieTrackerGoal',     dailyGoal);
+    localStorage.setItem('proteinGoal',            proteinGoal);
+    localStorage.setItem('carbsGoal',              carbsGoal);
+    localStorage.setItem('fatGoal',                fatGoal);
+    localStorage.setItem('calorieTrackerLog',      JSON.stringify(todaysLog));
+    localStorage.setItem('calorieTrackerWater',    waterCount);
+    localStorage.setItem('calorieTrackerMlPerGlass', mlPerGlass);
+    localStorage.setItem('calorieTrackerLastLogDate', getTodayKey());
+    localStorage.setItem('currentDayType',         currentDayType);
+    localStorage.setItem('workoutGoals',           JSON.stringify(workoutGoals));
+    localStorage.setItem('restGoals',              JSON.stringify(restGoals));
+    localStorage.setItem('calArchiveCals',  totalCalories);
+    localStorage.setItem('calArchiveProt',  totalProtein);
+    localStorage.setItem('calArchiveCarbs', totalCarbs);
+    localStorage.setItem('calArchiveFat',   totalFat);
+    localStorage.setItem('calArchiveWater', waterCount);
+  }
+
+  function saveHistory() {
+    const seen = new Set();
+    dailyHistory = dailyHistory
+      .sort((a,b) => new Date(b.date) - new Date(a.date))
+      .filter(d => { if(seen.has(d.date)) return false; seen.add(d.date); return true; })
+      .slice(0, 30);
+    localStorage.setItem('calorieTrackerHistory', JSON.stringify(dailyHistory));
+  }
+
+  function getTodayKey() { return new Date().toISOString().split('T')[0]; }
+
+  // ── MIDNIGHT RESET ───────────────────────────────────────────────────────────
+  function checkAndResetIfNewDay() {
+    const todayKey = getTodayKey();
+    const last = localStorage.getItem('calorieTrackerLastLogDate');
+    if (last && last !== todayKey) {
+      const archCals = parseFloat(localStorage.getItem('calArchiveCals') || '0');
+      if (archCals > 0) {
+        const exIdx = dailyHistory.findIndex(h => h.date === last);
+        const entry = {
+          date: last,
+          totalCalories: archCals,
+          totalProtein:  parseFloat(localStorage.getItem('calArchiveProt')  || '0'),
+          totalCarbs:    parseFloat(localStorage.getItem('calArchiveCarbs') || '0'),
+          totalFat:      parseFloat(localStorage.getItem('calArchiveFat')   || '0'),
+          water:         parseInt(localStorage.getItem('calArchiveWater')   || '0')
+        };
+        if (exIdx !== -1) dailyHistory[exIdx] = entry; else dailyHistory.push(entry);
+        saveHistory();
+      }
+      todaysLog = []; waterCount = 0;
+      localStorage.setItem('calorieTrackerLog', JSON.stringify([]));
+      localStorage.setItem('calorieTrackerWater', '0');
+      localStorage.setItem('calorieTrackerLastLogDate', todayKey);
+      ['calArchiveCals','calArchiveProt','calArchiveCarbs','calArchiveFat','calArchiveWater'].forEach(k => localStorage.removeItem(k));
+      recalculateTotals(); updateUI();
+      const al = document.getElementById('resetAlert');
+      al.style.display = 'block'; setTimeout(() => al.style.display = 'none', 4000);
+    }
+  }
+
+  // ── TOTALS ────────────────────────────────────────────────────────────────────
+  function recalculateTotals() {
+    totalCalories = todaysLog.reduce((s,i) => s+(i.calories||0), 0);
+    totalProtein  = todaysLog.reduce((s,i) => s+(i.protein||0),  0);
+    totalCarbs    = todaysLog.reduce((s,i) => s+(i.carbs||0),    0);
+    totalFat      = todaysLog.reduce((s,i) => s+(i.fat||0),      0);
+  }
+
+  // ── UI UPDATE ─────────────────────────────────────────────────────────────────
+  function updateUI() {
+    document.getElementById('totalCaloriesDisplay').textContent = Math.round(totalCalories);
+    document.getElementById('totalProtein').textContent = Math.round(totalProtein);
+    document.getElementById('totalCarbs').textContent   = Math.round(totalCarbs);
+    document.getElementById('totalFat').textContent     = Math.round(totalFat);
+    document.getElementById('waterCountDisplay').textContent = waterCount;
+    const totalMl = waterCount * mlPerGlass;
+    document.getElementById('waterMlDisplay').textContent = totalMl >= 1000 ? `${(totalMl/1000).toFixed(1)}L total` : `${totalMl} ml total`;
+    const rem = dailyGoal - totalCalories;
+    document.getElementById('remainingText').textContent = rem >= 0 ? `remaining ${Math.round(rem)}` : `surplus ${Math.round(Math.abs(rem))}`;
+    document.getElementById('progressFill').style.width = `${Math.min(100,(totalCalories/dailyGoal)*100)}%`;
+    document.getElementById('goalInput').value        = dailyGoal;
+    document.getElementById('proteinGoalInput').value = proteinGoal;
+    document.getElementById('carbsGoalInput').value   = carbsGoal;
+    document.getElementById('fatGoalInput').value     = fatGoal;
+    const today = new Date();
+    document.getElementById('dateDisplay').textContent = `📅 ${today.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}`;
+    renderTodayLog();
+  }
+
+  // ── SEARCH ─────────────────────────────────────────────────────────────────────
+  async function performSearch(q) {
+    const query = q !== undefined ? q : document.getElementById('foodSearchInput').value.trim();
+    const status = document.getElementById('searchStatus');
+    let pool;
+
+    if (query === '') {
+      const uniqueRecents = [];
+      recentFoods.forEach(rf => { if (!uniqueRecents.some(x => x.name === rf.name)) uniqueRecents.push(rf); });
+      pool = uniqueRecents.length > 0 ? [...uniqueRecents, ...OFFLINE_DATABASE].slice(0,12) : OFFLINE_DATABASE.slice(0,10);
+      status.textContent = uniqueRecents.length > 0 ? '🕒 Recent foods + popular database' : '📋 Popular database items';
+      displayResults(pool);
+    } else {
+      pool = getFullDB().filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
+      
+      if (pool.length > 0) {
+        status.textContent = `✅ ${pool.length} local match${pool.length>1?'es':''} found`;
+        displayResults(pool);
+      } else {
+        status.textContent = '🌐 Searching online...';
+        displayResults([]);
+        try {
+          const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=15`);
+          const data = await res.json();
+          if (data.products && data.products.length > 0) {
+            const onlineResults = data.products.map(p => ({
+              name: p.product_name || 'Unknown Food',
+              serving: '100g', 
+              calories: Math.round(p.nutriments?.['energy-kcal_100g'] || p.nutriments?.['energy-kcal_value'] || 0),
+              protein: Math.round((p.nutriments?.proteins_100g || 0) * 10) / 10,
+              carbs: Math.round((p.nutriments?.carbohydrates_100g || 0) * 10) / 10,
+              fat: Math.round((p.nutriments?.fat_100g || 0) * 10) / 10,
+              isCustom: false
+            })).filter(p => p.name !== 'Unknown Food' && (p.calories > 0 || p.protein > 0)); 
+            if (onlineResults.length > 0) {
+              status.textContent = `🌐 ${onlineResults.length} online matches found`;
+              displayResults(onlineResults);
+            } else {
+              status.textContent = '😕 Not found locally or online — try custom entry';
+              displayResults([]);
+            }
+          } else {
+            status.textContent = '😕 Not found locally or online — try custom entry';
+            displayResults([]);
+          }
+        } catch (err) {
+          status.textContent = '❌ Online search failed. Check connection or try custom.';
+        }
+      }
+    }
+  }
+
+  function displayResults(results) {
+    const container = document.getElementById('foodResultsContainer');
+    if (!results.length) {
+      container.innerHTML = `<div style="color:#94a3b8;text-align:center;padding:16px;font-size:0.8rem;">No foods found. Use custom entry above.</div>`;
+      return;
+    }
+    container.innerHTML = results.map((item, idx) => {
+      const cal = item.calories||0, p = item.protein||0, c = item.carbs||0, f = item.fat||0;
+      const isMassBase = (item.serving||'').toLowerCase().match(/^\d+\s*(g|ml)/);
+      return `<div class="food-item${item.isCustom?' custom-item':''}" data-idx="${idx}">
+        <div class="food-main-row">
+          <div class="food-info">
+            <span class="food-name">${escHtml(item.name)}
+              ${item.isRecent?'<span class="recent-tag">Recent</span>':''}
+              ${item.isCustom?'<span class="custom-tag">Custom</span>':''}
+            </span>
+            <span class="food-serving">${escHtml(item.serving||'')} • ${cal} kcal</span>
+            <span class="food-macros">
+              <span class="protein-color">🥩${p}g</span>
+              <span class="carbs-color">🍞${c}g</span>
+              <span class="fat-color">🧈${f}g</span>
+            </span>
+          </div>
+          <div class="food-actions">
+            <button class="preset-btn active">Qty</button>
+            ${isMassBase ? '<button class="manual-btn">Grams</button>' : ''}
+          </div>
+        </div>
+        <div class="preset-row" style="display:flex;align-items:center;gap:6px;">
+          <input type="number" class="qty-input" value="1" min="0.25" max="20" step="0.25">
+          <span class="cal-badge preset-cal">${cal} kcal</span>
+          <button class="add-btn preset-add">+</button>
+        </div>
+        ${isMassBase ? `<div class="manual-gram-row" style="display:none;">
+          <input type="number" class="gram-input" value="100" min="1" max="5000">
+          <span style="font-size:0.7rem;color:#94a3b8;">g/ml</span>
+          <span class="cal-badge dynamic-cal">${cal} kcal</span>
+          <button class="add-btn gram-add">+</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+
+    container.querySelectorAll('.food-item').forEach(el => {
+      const idx = parseInt(el.dataset.idx);
+      const fd = results[idx];
+      if (!fd) return;
+      const presetBtn = el.querySelector('.preset-btn'), manualBtn = el.querySelector('.manual-btn');
+      const presetRow = el.querySelector('.preset-row'), gramRow = el.querySelector('.manual-gram-row');
+      const qtyInput = el.querySelector('.qty-input'), gramInput = el.querySelector('.gram-input');
+      const presetCal = el.querySelector('.preset-cal'), dynCal = el.querySelector('.dynamic-cal');
+
+      presetBtn?.addEventListener('click', () => { presetBtn.classList.add('active'); manualBtn?.classList.remove('active'); presetRow.style.display='flex'; if(gramRow) gramRow.style.display='none'; });
+      manualBtn?.addEventListener('click', () => { manualBtn.classList.add('active'); presetBtn.classList.remove('active'); presetRow.style.display='none'; if(gramRow) gramRow.style.display='flex'; });
+      qtyInput?.addEventListener('input', () => { if(presetCal) presetCal.textContent = Math.round(fd.calories*(parseFloat(qtyInput.value)||0))+' kcal'; });
+      gramInput?.addEventListener('input', () => { if(dynCal) dynCal.textContent = Math.round((fd.calories/100)*(parseFloat(gramInput.value)||0))+' kcal'; });
+
+      el.querySelector('.preset-add')?.addEventListener('click', () => {
+        const qty = parseFloat(qtyInput?.value)||1;
+        addToLog(fd, qty);
+      });
+      el.querySelector('.gram-add')?.addEventListener('click', () => {
+        const g = parseFloat(gramInput?.value)||0;
+        if (g > 0) addToLog(fd, g/100, `${g}g`);
+      });
+    });
+  }
+
+  // ── ADD TO LOG ────────────────────────────────────────────────────────────────
+  function addToLog(fd, qty=1, servingOverride=null) {
+    recentFoods = recentFoods.filter(f => f.name !== fd.name);
+    recentFoods.unshift({...fd, isRecent: true});
+    if (recentFoods.length > 20) recentFoods.pop();
+    localStorage.setItem('recentFoods', JSON.stringify(recentFoods));
+
+    todaysLog.push({
+      name:      fd.name,
+      calories:  Math.round(fd.calories * qty),
+      protein:   Math.round((fd.protein||0) * qty * 10) / 10,
+      carbs:     Math.round((fd.carbs||0)   * qty * 10) / 10,
+      fat:       Math.round((fd.fat||0)     * qty * 10) / 10,
+      serving:   servingOverride || (qty !== 1 ? `${qty}× ${fd.serving}` : fd.serving),
+      meal:      document.getElementById('activeMealSelector').value,
+      timestamp: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+    });
+    recalculateTotals(); saveState(); updateUI();
+  }
+
+  // ── RENDER LOG ────────────────────────────────────────────────────────────────
+  function renderTodayLog() {
+    const container = document.getElementById('todayLogContainer');
+    if (!todaysLog.length) {
+      container.innerHTML = '<div style="color:#475569;text-align:center;padding:12px;font-size:0.8rem;">No items tracked yet today.</div>';
+      return;
+    }
+    const meals = ['Breakfast','Lunch','Dinner','Snacks'];
+    container.innerHTML = meals.map(meal => {
+      const items = todaysLog.map((it,i) => ({...it,_i:i})).filter(it => (it.meal||'Snacks') === meal);
+      if (!items.length) return '';
+      const mealCals = Math.round(items.reduce((s,it) => s+it.calories,0));
+      const emoji = {Breakfast:'🍳',Lunch:'🥗',Dinner:'🍲',Snacks:'🥨'}[meal];
+      const rows = items.map(it => `
+        <div class="log-item-row">
+          <div style="display:flex;flex-direction:column;max-width:68%;">
+            <span style="font-weight:600;font-size:0.78rem;">${escHtml(it.name)} <span style="color:#94a3b8;font-size:0.62rem;">(${escHtml(it.serving||'')})</span></span>
+            <span style="font-size:0.62rem;color:#cbd5e1;">P:${Math.round(it.protein)}g C:${Math.round(it.carbs)}g F:${Math.round(it.fat)}g • ${it.timestamp||''}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-weight:700;color:#f97316;font-size:0.8rem;">${Math.round(it.calories)} kcal</span>
+            <button class="delete-btn" onclick="removeLogItem(${it._i})">✕</button>
+          </div>
+        </div>`).join('');
+      return `<div class="meal-group-container">
+        <div class="meal-group-header"><span>${emoji} ${meal}</span><span>${mealCals} kcal</span></div>
+        ${rows}
+      </div>`;
+    }).join('');
+  }
+
+  function removeLogItem(idx) {
+    todaysLog.splice(idx, 1);
+    recalculateTotals(); saveState(); updateUI();
+  }
+
+  // ── GOALS MODAL ───────────────────────────────────────────────────────────────
+  function updateGoalCheck(day) {
+    const p = day === 'workout' ? 'gw' : 'gr';
+    const cal   = parseFloat(document.getElementById(`${p}-cal`).value)   || 0;
+    const prot  = parseFloat(document.getElementById(`${p}-prot`).value)  || 0;
+    const carbs = parseFloat(document.getElementById(`${p}-carbs`).value) || 0;
+    const fat   = parseFloat(document.getElementById(`${p}-fat`).value)   || 0;
+    const macroCal = Math.round(prot * 4 + carbs * 4 + fat * 9);
+    const el = document.getElementById(`${p}-macro-cal`);
+    const box = document.getElementById(`${p}-check`);
+    if (!el) return;
+    const diff = macroCal - cal;
+    el.textContent = `${macroCal} kcal`;
+    if (cal === 0) { el.style.color = '#64748b'; box.style.borderLeft = ''; }
+    else if (Math.abs(diff) <= 30) { el.style.color = '#a3e635'; el.textContent += ' ✅'; box.style.borderLeft = '3px solid #a3e635'; }
+    else if (diff > 30) { el.style.color = '#ef4444'; el.textContent += ` ⚠️ +${diff} over`; box.style.borderLeft = '3px solid #ef4444'; }
+    else { el.style.color = '#f59e0b'; el.textContent += ` ⚠️ ${diff} under`; box.style.borderLeft = '3px solid #f59e0b'; }
+  }
+
+  function openGoalsModal() {
+    document.getElementById('gw-cal').value   = workoutGoals.cal;
+    document.getElementById('gw-prot').value  = workoutGoals.prot;
+    document.getElementById('gw-carbs').value = workoutGoals.carbs;
+    document.getElementById('gw-fat').value   = workoutGoals.fat;
+    document.getElementById('gr-cal').value   = restGoals.cal;
+    document.getElementById('gr-prot').value  = restGoals.prot;
+    document.getElementById('gr-carbs').value = restGoals.carbs;
+    document.getElementById('gr-fat').value   = restGoals.fat;
+    updateGoalCheck('workout'); updateGoalCheck('rest');
+    document.getElementById('goalsModal').style.display = 'flex';
+  }
+
+  function saveGoals(type) {
+    const g = (id) => parseFloat(document.getElementById(id).value) || 0;
+    workoutGoals = { cal: g('gw-cal'), prot: g('gw-prot'), carbs: g('gw-carbs'), fat: g('gw-fat') };
+    restGoals    = { cal: g('gr-cal'), prot: g('gr-prot'), carbs: g('gr-carbs'), fat: g('gr-fat') };
+    const applyDay = type === 'both' ? currentDayType : type;
+    applyDayGoals(applyDay);
+    saveState();
+    document.getElementById('goalsModal').style.display = 'none';
+  }
+
+  function applyDayGoals(day) {
+    const goals = day === 'workout' ? workoutGoals : restGoals;
+    if (goals.cal)   dailyGoal   = goals.cal;
+    if (goals.prot)  proteinGoal = goals.prot;
+    if (goals.carbs) carbsGoal   = goals.carbs;
+    if (goals.fat)   fatGoal     = goals.fat;
+    currentDayType = day;
+    document.getElementById('workoutDayBtn').classList.toggle('active', day === 'workout');
+    document.getElementById('restDayBtn').classList.toggle('active',    day === 'rest');
+    updateUI();
+  }
+
+  // ── HISTORY MODAL ─────────────────────────────────────────────────────────────
+  function showHistory() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    let chartHTML = '';
+    if (dailyHistory.length > 0) {
+      const last7 = [...dailyHistory].sort((a,b) => new Date(a.date)-new Date(b.date)).slice(-7);
+      const maxCal = Math.max(dailyGoal, ...last7.map(d => d.totalCalories));
+      const goalPct = Math.min(98, (dailyGoal / maxCal) * 100);
+      const bars = last7.map(d => {
+        const pct = Math.min(98, (d.totalCalories / maxCal) * 100);
+        const color = d.totalCalories > dailyGoal ? '#ef4444' : '#f97316';
+        const lbl = new Date(d.date+'T12:00:00').toLocaleDateString('en', {weekday:'short'});
+        return `<div class="chart-bar" style="height:${pct}%;background:${color};">
+          <span>${Math.round(d.totalCalories)}</span>
+          <div class="chart-date">${lbl}</div>
+        </div>`;
+      }).join('');
+      chartHTML = `<div class="chart-container">
+        <div class="goal-line" style="bottom:${goalPct}%;"></div>
+        ${bars}
+      </div>
+      <p style="font-size:0.65rem;color:#64748b;text-align:right;margin-bottom:12px;">── Goal line at ${dailyGoal} kcal</p>`;
+    }
+    const trs = [...dailyHistory]
+      .sort((a,b) => new Date(b.date)-new Date(a.date))
+      .map(d => `<tr>
+        <td class="date-col">${d.date}</td>
+        <td>${Math.round(d.totalCalories)}</td>
+        <td style="color:#3b82f6;">${Math.round(d.totalProtein)}g</td>
+        <td style="color:#f59e0b;">${Math.round(d.totalCarbs)}g</td>
+        <td style="color:#ef4444;">${Math.round(d.totalFat)}g</td>
+      </tr>`).join('');
+    overlay.innerHTML = `<div class="modal">
+      <div class="modal-header"><h3>📊 Chart & History</h3><button class="modal-close">✕</button></div>
+      <div class="modal-body">
+        ${chartHTML}
+        ${!dailyHistory.length
+          ? '<p style="text-align:center;color:#475569;padding:24px;font-size:0.8rem;">No history yet. End a day to archive it.</p>'
+          : `<table class="history-table">
+              <thead><tr>
+                <th style="text-align:left;">Date</th><th>Cal</th>
+                <th style="color:#3b82f6;">P(g)</th>
+                <th style="color:#f59e0b;">C(g)</th>
+                <th style="color:#ef4444;">F(g)</th>
+              </tr></thead>
+              <tbody>${trs}</tbody>
+            </table>`}
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('.modal-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────────────
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // ── INIT ──────────────────────────────────────────────────────────────────────
+  function initialize() {
+    try {
+      dailyGoal      = parseInt(localStorage.getItem('calorieTrackerGoal'))      || 2000;
+      proteinGoal    = parseInt(localStorage.getItem('proteinGoal'))              || 150;
+      carbsGoal      = parseInt(localStorage.getItem('carbsGoal'))                || 250;
+      fatGoal        = parseInt(localStorage.getItem('fatGoal'))                  || 65;
+      waterCount     = parseInt(localStorage.getItem('calorieTrackerWater'))      || 0;
+      mlPerGlass     = parseInt(localStorage.getItem('calorieTrackerMlPerGlass')) || 250;
+      currentDayType = localStorage.getItem('currentDayType')                    || 'workout';
+      todaysLog      = JSON.parse(localStorage.getItem('calorieTrackerLog')       || '[]');
+      workoutGoals   = JSON.parse(localStorage.getItem('workoutGoals')            || JSON.stringify(workoutGoals));
+      restGoals      = JSON.parse(localStorage.getItem('restGoals')               || JSON.stringify(restGoals));
+      document.getElementById('mlPerGlass').value = mlPerGlass;
+    } catch(e) {}
+    try { userDatabase = JSON.parse(localStorage.getItem('userDatabase') || '[]'); } catch(e) { userDatabase = []; }
+    try { recentFoods  = JSON.parse(localStorage.getItem('recentFoods')  || '[]'); } catch(e) { recentFoods = []; }
+    try { dailyHistory = JSON.parse(localStorage.getItem('calorieTrackerHistory') || '[]'); } catch(e) { dailyHistory = []; }
+
+    document.getElementById('workoutDayBtn').classList.toggle('active', currentDayType === 'workout');
+    document.getElementById('restDayBtn').classList.toggle('active',    currentDayType === 'rest');
+    checkAndResetIfNewDay();
+    recalculateTotals();
+    updateUI();
+    performSearch('');
+    setInterval(checkAndResetIfNewDay, 60000);
+  }
+
+  // ── EVENT LISTENERS ───────────────────────────────────────────────────────────
+  document.getElementById('waterPlus').addEventListener('click',  () => { waterCount++; saveState(); updateUI(); });
+  document.getElementById('waterMinus').addEventListener('click', () => { if(waterCount>0) waterCount--; saveState(); updateUI(); });
+  document.getElementById('mlPerGlass').addEventListener('change', e => { mlPerGlass = parseInt(e.target.value)||250; saveState(); updateUI(); });
+
+  document.getElementById('goalSetBtn').addEventListener('click',    () => { dailyGoal   = parseInt(document.getElementById('goalInput').value)||2000;   saveState(); updateUI(); });
+  document.getElementById('proteinSetBtn').addEventListener('click', () => { proteinGoal = parseInt(document.getElementById('proteinGoalInput').value)||150; saveState(); updateUI(); });
+  document.getElementById('carbsSetBtn').addEventListener('click',   () => { carbsGoal   = parseInt(document.getElementById('carbsGoalInput').value)||250;  saveState(); updateUI(); });
+  document.getElementById('fatSetBtn').addEventListener('click',     () => { fatGoal     = parseInt(document.getElementById('fatGoalInput').value)||65;     saveState(); updateUI(); });
+
+  document.getElementById('openGoalsBtn').addEventListener('click', openGoalsModal);
+  document.getElementById('closeGoalsBtn').addEventListener('click', () => document.getElementById('goalsModal').style.display='none');
+  document.getElementById('goalsModal').addEventListener('click', e => { if(e.target===document.getElementById('goalsModal')) document.getElementById('goalsModal').style.display='none'; });
+
+  ['gw-cal','gw-prot','gw-carbs','gw-fat'].forEach(id => document.getElementById(id).addEventListener('input', () => updateGoalCheck('workout')));
+  ['gr-cal','gr-prot','gr-carbs','gr-fat'].forEach(id => document.getElementById(id).addEventListener('input', () => updateGoalCheck('rest')));
+  document.getElementById('workoutDayBtn').addEventListener('click', () => applyDayGoals('workout'));
+  document.getElementById('restDayBtn').addEventListener('click',    () => applyDayGoals('rest'));
+
+  document.getElementById('searchButton').addEventListener('click', () => performSearch());
+  document.getElementById('foodSearchInput').addEventListener('keypress', e => { if(e.key==='Enter') performSearch(); });
+  document.getElementById('foodSearchInput').addEventListener('input', e => { if(e.target.value==='') performSearch(''); });
+
+  document.getElementById('customAddBtn').addEventListener('click', () => {
+    const n   = document.getElementById('customFoodName').value.trim();
+    const cal = parseFloat(document.getElementById('customCalories').value)||0;
+    if (!n) { alert('Enter a food name.'); return; }
+    const p = parseFloat(document.getElementById('customProtein').value)||0;
+    const c = parseFloat(document.getElementById('customCarbs').value)||0;
+    const f = parseFloat(document.getElementById('customFat').value)||0;
+    const s = document.getElementById('customServing').value.trim()||'1 serving';
+    const fd = { name:n, calories:cal, protein:p, carbs:c, fat:f, serving:s, isCustom:true, id:'custom_'+Date.now() };
+    userDatabase.push(fd);
+    localStorage.setItem('userDatabase', JSON.stringify(userDatabase));
+    addToLog(fd, 1);
+    ['customFoodName','customCalories','customProtein','customCarbs','customFat','customServing'].forEach(id => document.getElementById(id).value='');
+  });
+
+  document.getElementById('clearLogBtn').addEventListener('click', () => {
+    if (confirm("Clear today's log?")) { todaysLog=[]; waterCount=0; recalculateTotals(); saveState(); updateUI(); }
+  });
+
+  document.getElementById('endLogBtn').addEventListener('click', () => {
+    if (!todaysLog.length && waterCount===0) { alert('Nothing logged today.'); return; }
+    if (!confirm('Archive today and start fresh?')) return;
+    const d = getTodayKey();
+    const exIdx = dailyHistory.findIndex(h => h.date === d);
+    const entry = { date:d, totalCalories, totalProtein, totalCarbs, totalFat, water: waterCount };
+    if (exIdx !== -1) {
+      dailyHistory[exIdx].totalCalories += totalCalories;
+      dailyHistory[exIdx].totalProtein  += totalProtein;
+      dailyHistory[exIdx].totalCarbs    += totalCarbs;
+      dailyHistory[exIdx].totalFat      += totalFat;
+      dailyHistory[exIdx].water = (dailyHistory[exIdx].water||0) + waterCount;
+    } else { dailyHistory.push(entry); }
+    saveHistory();
+    todaysLog=[]; waterCount=0; recalculateTotals(); saveState(); updateUI();
+    const al = document.getElementById('resetAlert');
+    al.textContent='✅ Day archived! Fresh log started.'; al.style.display='block';
+    setTimeout(() => al.style.display='none', 3000);
+  });
+
+  document.getElementById('logHistoryBtn').addEventListener('click', showHistory);
+
+  window.addEventListener('online',  () => { document.getElementById('connectionStatus').textContent = '🌐 Online'; });
+  window.addEventListener('offline', () => { document.getElementById('connectionStatus').textContent = '📶 Offline'; });
+  if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+
+  initialize();
+</script>
+</body>
+</html>
